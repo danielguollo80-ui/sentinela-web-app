@@ -1,0 +1,351 @@
+"use client";
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { toPng } from 'html-to-image';
+import { SentinelaChart } from './sentinela-chart';
+import { SentinelaBioPanel } from './sentinela-bio-panel';
+import { MatchAnalysisPanel } from './match-analysis-panel';
+import { Button as ShadButton } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Download, RefreshCw, Bitcoin, Trophy, ChevronDown } from 'lucide-react';
+
+export const BannerGenerator = () => {
+  const [activeBot, setActiveBot] = useState<'crypto' | 'football'>('crypto');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
+  const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
+  const [availableMatches, setAvailableMatches] = useState<string[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<string>("");
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const [cryptoData, setCryptoData] = useState({
+    symbol: "BTC/USDT",
+    price: "75,921.70",
+    rsi: 55.7,
+    wt: 11.9,
+    trend: "Bullish (1H/4H)",
+    s_1h: "74,457",
+    r_1h: "75,999",
+    s_4h: "73,200",
+    r_4h: "78,500",
+    verdict: "CONSOLIDATION NEUTRAL - No reversal triggers detected at current levels. WaveTrend indicates stability."
+  });
+
+  const [footballData, setFootballData] = useState({
+    match: "Real Madrid vs Manchester City",
+    time: "20:00",
+    factors: {
+        favorite: "🛡️ Real Madrid or Draw (Conf: 78%)",
+        goals: "Over 2.5 (Premium) (Avg: 2.8)",
+        ht_goals: "Over 0.5 HT (Avg: 1.1)",
+        btts: "💎 Yes (Gold Match)",
+        corners: "Over 9.5 Corners (Avg: 10.2)",
+        shots: "Over 24.5 (Avg: 26.4)",
+        on_target: "Over 8.5 (Avg: 9.1)",
+        cards: "Over 3.5 (Avg: 4.2)"
+    }
+  });
+
+  const onExport = async () => {
+    if (exportRef.current === null) return;
+    try {
+      const dataUrl = await toPng(exportRef.current, { 
+        cacheBust: true, 
+        pixelRatio: 3,
+        width: 1200,
+        height: 675,
+        style: {
+          transform: 'scale(1)',
+          borderRadius: '0'
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `sentinela-${activeBot}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Export error:', err);
+    }
+  };
+
+  const handleSync = useCallback(async (symbolOverride?: string) => {
+    setIsSyncing(true);
+    try {
+      const sym = symbolOverride || (activeBot === 'crypto' ? selectedSymbol : selectedMatch);
+      const url = `/api/sync?bot=${activeBot}${sym ? `&symbol=${encodeURIComponent(sym)}` : ''}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Sync failed');
+      const data = await response.json();
+      
+      if (activeBot === 'crypto') {
+          setAvailableSymbols(data.allSymbols || []);
+          if (data.analysis) {
+             const botData = data.analysis;
+             setCryptoData({
+                symbol: botData.symbol,
+                price: botData.price.toLocaleString('en-US'),
+                rsi: parseFloat(botData['4h'].rsi.toFixed(1)),
+                wt: parseFloat(botData['4h'].wt1.toFixed(1)),
+                trend: botData['4h'].trend + " (4H)",
+                s_1h: (botData.s_1h || botData.support)?.toLocaleString('en-US') || "---",
+                r_1h: (botData.r_1h || botData.resistance)?.toLocaleString('en-US') || "---",
+                s_4h: (botData.s_4h || botData.support)?.toLocaleString('en-US') || "---",
+                r_4h: (botData.r_4h || botData.resistance)?.toLocaleString('en-US') || "---",
+                verdict: botData.rev_type || "Stability detected. No clear exhaustion or reversal signals at the moment."
+             });
+             setSelectedSymbol(botData.symbol);
+          }
+          if (data.history && data.history.length > 0) {
+             setHistoryData(data.history);
+          }
+      } else {
+          const matchData = data.match || data;
+          setAvailableMatches(data.allMatches || []);
+          
+          setFootballData({
+            match: matchData.match,
+            time: matchData.time,
+            factors: {
+              ...matchData.factors,
+              league: matchData.league,
+              country: matchData.country
+            }
+          });
+          
+          if (!selectedMatch && matchData.match) {
+              setSelectedMatch(matchData.match);
+          }
+      }
+    } catch (err) {
+      console.error('Sync error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [activeBot, selectedSymbol, selectedMatch]);
+
+  useEffect(() => {
+    handleSync();
+
+    const updateScale = () => {
+      if (containerRef.current) {
+        const availableWidth = containerRef.current.offsetWidth;
+        const newScale = isZoomed ? 1 : Math.min(1, availableWidth / 1200);
+        setScale(newScale);
+      }
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [activeBot, selectedSymbol, selectedMatch, handleSync]);
+
+  return (
+     <div className="container mx-auto p-8 max-w-[1600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+           {/* Controls Sidebar */}
+           <div className="lg:col-span-1 space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800 h-fit">
+              <div className="flex items-center gap-2 mb-4">
+                 <div className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+                 <h2 className="font-bold text-slate-100 tracking-tight text-xs uppercase">Dashboard Engine</h2>
+              </div>
+              
+              {/* Mode Switcher */}
+              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+                 <button 
+                  onClick={() => setActiveBot('crypto')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-md transition-all ${activeBot === 'crypto' ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                 >
+                    <Bitcoin className="w-3 h-3" />
+                    CRYPTO
+                 </button>
+                 <button 
+                  onClick={() => setActiveBot('football')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-md transition-all ${activeBot === 'football' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                 >
+                    <Trophy className="w-3 h-3" />
+                    SPORTS
+                 </button>
+              </div>
+
+              {/* Dynamic Controls based on Bot */}
+              <div className="space-y-4 pt-4">
+                 {activeBot === 'crypto' && (
+                    <>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase mb-1 block">Live Market Selector</Label>
+                          <div className="relative">
+                              <select 
+                                  value={selectedSymbol}
+                                  onChange={(e) => setSelectedSymbol(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-[10px] p-2 rounded focus:ring-1 focus:ring-sky-500 outline-none"
+                              >
+                                  {availableSymbols.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-slate-600 pointer-events-none" />
+                          </div>
+                      </div>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase">Price Override</Label>
+                          <Input 
+                            value={cryptoData.price} 
+                            onChange={(e) => setCryptoData({...cryptoData, price: e.target.value})}
+                            className="bg-slate-950 border-slate-700 text-sky-400 font-mono text-xs"
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase">AI Verdict</Label>
+                          <textarea 
+                            value={cryptoData.verdict} 
+                            onChange={(e) => setCryptoData({...cryptoData, verdict: e.target.value})}
+                            className="w-full h-24 p-2.5 rounded-md bg-slate-950 border border-slate-700 text-slate-400 text-[11px] focus:outline-none focus:ring-1 focus:ring-sky-500 leading-tight"
+                          />
+                      </div>
+                    </>
+                 )}
+
+                 {activeBot === 'football' && (
+                    <>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase mb-1 block">Live Match Selector</Label>
+                          <div className="relative">
+                              <select 
+                                  value={selectedMatch}
+                                  onChange={(e) => setSelectedMatch(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-[10px] p-2 rounded focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
+                              >
+                                  {availableMatches.map(m => <option key={m} value={m} className="bg-slate-950 text-slate-100">{m}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-3 top-2.5 w-3 h-3 text-emerald-500 pointer-events-none" />
+                          </div>
+                      </div>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase">Match Info</Label>
+                          <Input 
+                            value={footballData.match} 
+                            onChange={(e) => setFootballData({...footballData, match: e.target.value})}
+                            className="bg-slate-950 border-slate-700 text-emerald-400 font-bold text-xs"
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <Label className="text-slate-400 text-[10px] font-bold uppercase">Favorite Weight</Label>
+                          <Input 
+                            value={footballData.factors.favorite} 
+                            onChange={(e) => setFootballData({...footballData, factors: {...footballData.factors, favorite: e.target.value}})}
+                            className="bg-slate-950 border-slate-700 text-white text-xs"
+                          />
+                      </div>
+                    </>
+                 )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-6 border-t border-slate-800 flex flex-col gap-3">
+                 <ShadButton 
+                    onClick={() => handleSync()} 
+                    disabled={isSyncing}
+                    className={`w-full font-bold gap-2 mb-2 ${activeBot === 'crypto' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+                 >
+                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'SYNCING...' : `REFRESH DATA`}
+                 </ShadButton>
+
+                 <ShadButton onClick={onExport} className="w-full bg-slate-100 hover:bg-white text-slate-950 font-black gap-2">
+                    <Download className="w-4 h-4" />
+                    EXPORT JPG
+                 </ShadButton>
+              </div>
+           </div>
+
+           {/* Preview Area */}
+           <div className="lg:col-span-3 space-y-8">
+              <Tabs defaultValue="preview" className="w-full">
+                 <div className="flex justify-between items-end mb-4">
+                    <TabsList className="bg-slate-900 border-slate-800">
+                       <TabsTrigger value="preview" className={activeBot === 'crypto' ? 'data-[state=active]:bg-sky-600' : 'data-[state=active]:bg-emerald-600'}>Asset Preview</TabsTrigger>
+                       <TabsTrigger value="config" className="opacity-50 pointer-events-none">History</TabsTrigger>
+                    </TabsList>
+                    <div className="flex gap-2">
+                       <ShadButton 
+                         variant="outline" 
+                         size="sm" 
+                         onClick={() => setIsZoomed(!isZoomed)}
+                         className={`text-[10px] font-bold h-8 gap-2 border-slate-800 ${isZoomed ? 'bg-sky-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+                       >
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                         {isZoomed ? 'AUTO-FIT' : 'REAL SIZE (1200px)'}
+                       </ShadButton>
+                    </div>
+                 </div>
+
+                 <TabsContent value="preview" className="mt-0 ring-offset-background focus-visible:outline-none focus:outline-none">
+                    <div ref={containerRef} className={`w-full overflow-hidden pb-8 flex flex-col items-center ${isZoomed ? 'overflow-x-auto justify-start' : 'justify-center'}`}>
+                       <div 
+                         style={{ 
+                           width: '1200px',
+                           height: '675px',
+                           transform: `scale(${scale})`,
+                           transformOrigin: isZoomed ? 'top left' : 'top center',
+                           marginBottom: `-${675 * (1 - scale)}px`,
+                           transition: 'transform 0.3s ease-out, margin 0.3s ease-out'
+                         }}
+                       >
+                          <div 
+                            ref={exportRef}
+                            className={`relative w-[1200px] h-[675px] rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-all duration-500 antialiased ${activeBot === 'crypto' ? 'bg-slate-950 border-slate-800 p-12' : 'bg-slate-950 border-emerald-900/50'}`}
+                            style={{ 
+                              WebkitFontSmoothing: 'antialiased',
+                              MozOsxFontSmoothing: 'grayscale'
+                            }}
+                          >
+                             {/* Background Cinematic effects */}
+                             <div className={`absolute inset-0 transition-opacity duration-1000 ${activeBot === 'crypto' ? 'opacity-100' : 'opacity-0'}`} 
+                                  style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(14, 165, 233, 0.12) 0%, transparent 60%)' }} />
+                             <div className={`absolute inset-0 transition-opacity duration-1000 ${activeBot === 'football' ? 'opacity-100' : 'opacity-0'}`} 
+                                  style={{ backgroundImage: 'radial-gradient(circle at 70% 70%, rgba(16, 185, 129, 0.12) 0%, transparent 60%)' }} />
+
+                             {activeBot === 'crypto' ? (
+                                <>
+                                   <div className="absolute top-8 left-8 flex items-center gap-3 z-50">
+                                      <div className="w-8 h-8 bg-sky-500 rounded-md flex items-center justify-center font-bold text-slate-950">S</div>
+                                      <div>
+                                         <h3 className="text-sm font-black text-slate-100 leading-none tracking-tighter">SENTINELA AI</h3>
+                                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter italic">FINANCIAL QUANT ENGINE</p>
+                                      </div>
+                                   </div>
+                                   <div className="flex-1 mt-4 mb-2 bg-slate-900/10 rounded-2xl overflow-hidden border border-slate-800/30 relative z-10 min-h-[380px]">
+                                      {historyData.length > 0 && (
+                                         <SentinelaChart 
+                                            data={historyData} 
+                                            r_1h={cryptoData.r_1h !== "---" ? parseFloat(cryptoData.r_1h.replace(/,/g, '')) : undefined} 
+                                            s_1h={cryptoData.s_1h !== "---" ? parseFloat(cryptoData.s_1h.replace(/,/g, '')) : undefined} 
+                                            r_4h={cryptoData.r_4h !== "---" ? parseFloat(cryptoData.r_4h.replace(/,/g, '')) : undefined} 
+                                            s_4h={cryptoData.s_4h !== "---" ? parseFloat(cryptoData.s_4h.replace(/,/g, '')) : undefined} 
+                                         />
+                                      )}
+                                   </div>
+                                   <SentinelaBioPanel {...cryptoData} />
+                                </>
+                             ) : (
+                                <MatchAnalysisPanel 
+                                   match={footballData.match}
+                                   time={footballData.time}
+                                   factors={footballData.factors}
+                                />
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                 </TabsContent>
+              </Tabs>
+           </div>
+        </div>
+     </div>
+  );
+};
