@@ -22,7 +22,7 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-const QUICK_PICKS = ["BTC", "ETH", "SOL", "XRP", "BNB", "AVAX", "LINK", "AAVE", "TAO", "SUI"];
+const QUICK_PICKS = ["BTC", "ETH", "SOL", "AVAX", "TAO", "SUI", "XRP"];
 
 interface IndicatorData {
   ema_position?: string;
