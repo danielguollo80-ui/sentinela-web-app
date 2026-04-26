@@ -147,10 +147,78 @@ export const BannerGenerator = () => {
   }, [activeBot, selectedSymbol, selectedMatch, handleSync]);
 
   return (
-     <div className="container mx-auto p-8 max-w-[1600px]">
+     <div className="container mx-auto p-4 lg:p-8 max-w-[1600px]">
+        {/* Mobile Control Header (Visible only on small/medium screens) */}
+        <div className="lg:hidden mb-6 space-y-4">
+           {/* Bot Mode Selector - Mobile Side-by-side */}
+           <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 backdrop-blur-md">
+              <button 
+                onClick={() => setActiveBot('crypto')}
+                className={`flex-1 flex items-center justify-center gap-3 py-3 text-xs font-black rounded-lg transition-all ${activeBot === 'crypto' ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-500'}`}
+              >
+                 <Bitcoin className="w-4 h-4" />
+                 CRYPTO
+              </button>
+              <button 
+                onClick={() => setActiveBot('football')}
+                className={`flex-1 flex items-center justify-center gap-3 py-3 text-xs font-black rounded-lg transition-all ${activeBot === 'football' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500'}`}
+              >
+                 <Trophy className="w-4 h-4" />
+                 SPORTS
+              </button>
+           </div>
+
+           {/* Mobile Selectors - Large & Tappable */}
+           <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-4">
+              {activeBot === 'crypto' ? (
+                <div className="space-y-1.5">
+                   <Label className="text-slate-500 text-[9px] font-bold uppercase tracking-widest pl-1">Select Market</Label>
+                   <div className="relative">
+                      <select 
+                          value={selectedSymbol}
+                          onChange={(e) => setSelectedSymbol(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 text-slate-100 text-sm p-4 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none appearance-none"
+                      >
+                          {availableSymbols.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-4.5 w-5 h-5 text-sky-500 pointer-events-none" />
+                   </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                   <Label className="text-slate-500 text-[9px] font-bold uppercase tracking-widest pl-1">Select Match</Label>
+                   <div className="relative">
+                      <select 
+                          value={selectedMatch}
+                          onChange={(e) => setSelectedMatch(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 text-slate-100 text-sm p-4 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
+                      >
+                          {availableMatches.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-4.5 w-5 h-5 text-emerald-500 pointer-events-none" />
+                   </div>
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                 <ShadButton 
+                    onClick={() => handleSync()} 
+                    disabled={isSyncing}
+                    className={`flex-1 font-bold h-12 gap-2 ${activeBot === 'crypto' ? 'bg-sky-600' : 'bg-emerald-600'}`}
+                 >
+                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    SYNC DATA
+                 </ShadButton>
+                 <ShadButton onClick={onExport} className="w-12 h-12 p-0 bg-slate-100 text-slate-950 rounded-lg">
+                    <Download className="w-5 h-5 mx-auto" />
+                 </ShadButton>
+              </div>
+           </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-           {/* Controls Sidebar */}
-           <div className="lg:col-span-1 space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800 h-fit">
+           {/* Desktop Sidebar (Hidden on Mobile) */}
+           <div className="hidden lg:block lg:col-span-1 space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800 h-fit">
               <div className="flex items-center gap-2 mb-4">
                  <div className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
                  <h2 className="font-bold text-slate-100 tracking-tight text-xs uppercase">Dashboard Engine</h2>
@@ -184,7 +252,7 @@ export const BannerGenerator = () => {
                               <select 
                                   value={selectedSymbol}
                                   onChange={(e) => setSelectedSymbol(e.target.value)}
-                                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-[10px] p-2 rounded focus:ring-1 focus:ring-sky-500 outline-none"
+                                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-[10px] p-2 rounded focus:ring-1 focus:ring-sky-500 outline-none appearance-none"
                               >
                                   {availableSymbols.map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
@@ -298,7 +366,7 @@ export const BannerGenerator = () => {
                        >
                           <div 
                             ref={exportRef}
-                            className={`relative w-[1200px] h-[675px] rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-all duration-500 antialiased ${activeBot === 'crypto' ? 'bg-slate-950 border-slate-800 p-12' : 'bg-slate-950 border-emerald-900/50'}`}
+                            className={`relative w-[1200px] h-[675px] rounded-[1.5rem] lg:rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-all duration-500 antialiased ${activeBot === 'crypto' ? 'bg-slate-950 border-slate-800 p-6 lg:p-12' : 'bg-slate-950 border-emerald-900/50'}`}
                             style={{ 
                               WebkitFontSmoothing: 'antialiased',
                               MozOsxFontSmoothing: 'grayscale'
@@ -312,11 +380,11 @@ export const BannerGenerator = () => {
 
                              {activeBot === 'crypto' ? (
                                 <>
-                                   <div className="absolute top-8 left-8 flex items-center gap-3 z-50">
-                                      <div className="w-8 h-8 bg-sky-500 rounded-md flex items-center justify-center font-bold text-slate-950">S</div>
+                                   <div className="absolute top-6 lg:top-8 left-6 lg:left-8 flex items-center gap-3 z-50">
+                                      <div className="w-6 h-6 lg:w-8 lg:h-8 bg-sky-500 rounded-md flex items-center justify-center font-bold text-slate-950 text-xs">S</div>
                                       <div>
-                                         <h3 className="text-sm font-black text-slate-100 leading-none tracking-tighter">SENTINELA AI</h3>
-                                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter italic">FINANCIAL QUANT ENGINE</p>
+                                         <h3 className="text-xs lg:text-sm font-black text-slate-100 leading-none tracking-tighter">SENTINELA AI</h3>
+                                         <p className="text-[8px] lg:text-[9px] text-slate-500 font-bold uppercase tracking-tighter italic">FINANCIAL QUANT ENGINE</p>
                                       </div>
                                    </div>
                                    <div className="flex-1 mt-4 mb-2 bg-slate-900/10 rounded-2xl overflow-hidden border border-slate-800/30 relative z-10 min-h-[380px]">
