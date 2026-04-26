@@ -3,17 +3,17 @@ import { createClient } from '@vercel/kv';
 import fs from 'fs';
 import path from 'path';
 
-// Only initialize KV if we have a URL
+// Only initialize KV if URL is Upstash-compatible (must start with https)
 const url = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL;
 const token = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN;
 
-const kv = url ? createClient({
-  url: url,
-  token: token || '',
+const kv = (url && url.startsWith('https://') && token) ? createClient({
+  url,
+  token,
 }) : null;
 
 // Simple security token to prevent unauthorized POSTs
-const AUTH_TOKEN = process.env.SYNC_AUTH_TOKEN || 'sentinela_default_secret';
+const AUTH_TOKEN = process.env.SYNC_AUTH_TOKEN || '';
 
 export async function POST(request: Request) {
   try {
