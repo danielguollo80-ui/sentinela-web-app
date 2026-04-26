@@ -11,10 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw, Bitcoin, Trophy, ChevronDown } from 'lucide-react';
 
+const RAILWAY_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://sentinel-crypto-api-production.up.railway.app';
+const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'TAO/USDT', 'SUI/USDT', 'XRP/USDT'];
+
 export const BannerGenerator = () => {
   const [activeBot, setActiveBot] = useState<'crypto' | 'football'>('crypto');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
+  const [availableSymbols, setAvailableSymbols] = useState<string[]>(DEFAULT_SYMBOLS);
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [availableMatches, setAvailableMatches] = useState<string[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string>("");
@@ -77,51 +80,65 @@ export const BannerGenerator = () => {
   const handleSync = useCallback(async (symbolOverride?: string) => {
     setIsSyncing(true);
     try {
-      const sym = symbolOverride || (activeBot === 'crypto' ? selectedSymbol : selectedMatch);
-      const url = `/api/sync?bot=${activeBot}${sym ? `&symbol=${encodeURIComponent(sym)}` : ''}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Sync failed');
-      const data = await response.json();
-      
       if (activeBot === 'crypto') {
-          setAvailableSymbols(data.allSymbols || []);
-          if (data.analysis) {
-             const botData = data.analysis;
-             setCryptoData({
-                symbol: botData.symbol,
-                price: botData.price.toLocaleString('en-US'),
-                rsi: parseFloat(botData['4h'].rsi.toFixed(1)),
-                wt: parseFloat(botData['4h'].wt1.toFixed(1)),
-                trend: botData['4h'].trend + " (4H)",
-                s_1h: (botData.s_1h || botData.support)?.toLocaleString('en-US') || "---",
-                r_1h: (botData.r_1h || botData.resistance)?.toLocaleString('en-US') || "---",
-                s_4h: (botData.s_4h || botData.support)?.toLocaleString('en-US') || "---",
-                r_4h: (botData.r_4h || botData.resistance)?.toLocaleString('en-US') || "---",
-                verdict: botData.rev_type || "Stability detected. No clear exhaustion or reversal signals at the moment."
-             });
-             setSelectedSymbol(botData.symbol);
-          }
-          if (data.history && data.history.length > 0) {
-             setHistoryData(data.history);
-          }
-      } else {
-          const matchData = data.match || data;
-          setAvailableMatches(data.allMatches || []);
-          
-          setFootballData({
-            match: matchData.match,
-            time: matchData.time,
-            factors: {
-              ...matchData.factors,
-              league: matchData.league,
-              country: matchData.country
-            }
+        // Busca dados directamente do Railway (sem passar pelo /api/sync)
+        const res = await fetch(`${RAILWAY_URL}/latest`);
+        if (!res.ok) throw new Error('Railway /latest falhou');
+        const json = await res.json();
+        const symbols = json.symbols || {};
+        const allSyms = Object.keys(symbols);
+        if (allSyms.length > 0) setAvailableSymbols(allSyms);
+
+        const sym = symbolOverride || selectedSymbol;
+        const botData = symbols[sym] || symbols[allSyms[0]];
+        if (botData) {
+          const ind4h = botData['4h'] || botData.indicators_4h || {};
+          const supports = botData.supports || [];
+          const resistances = botData.resistances || [];
+          setCryptoData({
+            symbol: botData.symbol || sym,
+            price: (botData.price || 0).toLocaleString('en-US'),
+            rsi: parseFloat((ind4h.rsi || 50).toFixed(1)),
+            wt: parseFloat((ind4h.wt1 || 0).toFixed(1)),
+            trend: (ind4h.trend || "Neutral") + " (4H)",
+            s_1h: supports[0]?.toLocaleString('en-US') || "---",
+            r_1h: resistances[0]?.toLocaleString('en-US') || "---",
+            s_4h: supports[1]?.toLocaleString('en-US') || supports[0]?.toLocaleString('en-US') || "---",
+            r_4h: resistances[1]?.toLocaleString('en-US') || resistances[0]?.toLocaleString('en-US') || "---",
+            verdict: botData.ai_text || botData.rev_type || "Sem análise disponível."
           });
-          
-          if (!selectedMatch && matchData.match) {
-              setSelectedMatch(matchData.match);
+          if (botData.symbol) setSelectedSymbol(botData.symbol);
+        }
+
+        // Busca gráfico do Binance
+        try {
+          const binSym = sym.replace('/', '');
+          const binRes = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=1h&limit=500`);
+          if (binRes.ok) {
+            const klines = await binRes.json();
+            setHistoryData(klines.map((k: any) => ({
+              time: k[0] / 1000,
+              open: parseFloat(k[1]), high: parseFloat(k[2]),
+              low: parseFloat(k[3]),  close: parseFloat(k[4])
+            })));
           }
+        } catch { /* gráfico opcional */ }
+
+      } else {
+        // Football: continua a usar /api/sync (requer PC ligado)
+        const sym = symbolOverride || selectedMatch;
+        const url = `/api/sync?bot=football${sym ? `&symbol=${encodeURIComponent(sym)}` : ''}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Football sync falhou');
+        const data = await response.json();
+        const matchData = data.match || data;
+        setAvailableMatches(data.allMatches || []);
+        setFootballData({
+          match: matchData.match,
+          time: matchData.time,
+          factors: { ...matchData.factors, league: matchData.league, country: matchData.country }
+        });
+        if (!selectedMatch && matchData.match) setSelectedMatch(matchData.match);
       }
     } catch (err) {
       console.error('Sync error:', err);
