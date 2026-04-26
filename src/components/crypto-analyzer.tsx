@@ -185,11 +185,65 @@ function AiAnalysisBlock({ text }: { text: string }) {
   );
 }
 
+const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_CRYPTO_PASSWORD ?? "Sentinela2026";
+
+function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+  const [pwd, setPwd] = useState("");
+  const [wrong, setWrong] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwd === CORRECT_PASSWORD) {
+      sessionStorage.setItem("sentinel_auth", "1");
+      onUnlock();
+    } else {
+      setWrong(true);
+      setPwd("");
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 max-w-sm mt-24">
+      <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/60 space-y-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
+          <span className="text-2xl font-black text-emerald-400">S</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-white">Acesso Restrito</h2>
+          <p className="text-sm text-slate-500 mt-1">Introduz a password para continuar</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input
+            type="password"
+            placeholder="Password"
+            value={pwd}
+            onChange={(e) => { setPwd(e.target.value); setWrong(false); }}
+            className="bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600 text-center focus-visible:ring-emerald-500/50"
+            autoFocus
+          />
+          {wrong && <p className="text-xs text-red-400">Password incorreta.</p>}
+          <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold">
+            Entrar
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function CryptoAnalyzer() {
+  const [unlocked, setUnlocked] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("sentinel_auth") === "1";
+    }
+    return false;
+  });
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   const analyze = useCallback(async (sym: string) => {
     const s = sym.trim().toUpperCase();
