@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw, Bitcoin, Trophy, ChevronDown } from 'lucide-react';
 
-const RAILWAY_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://sentinel-crypto-api-production.up.railway.app';
+const RAILWAY_URL = 'https://sentinel-crypto-api-production.up.railway.app';
 const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'TAO/USDT', 'SUI/USDT', 'XRP/USDT'];
 
 export const BannerGenerator = () => {
@@ -92,20 +92,19 @@ export const BannerGenerator = () => {
         const sym = symbolOverride || selectedSymbol;
         const botData = symbols[sym] || symbols[allSyms[0]];
         if (botData) {
-          const ind4h = botData['4h'] || botData.indicators_4h || {};
-          const supports = botData.supports || [];
-          const resistances = botData.resistances || [];
+          const ind4h = botData['4h'] || {};
+          const fmt = (v: number | undefined) => v ? v.toLocaleString('en-US') : '---';
           setCryptoData({
             symbol: botData.symbol || sym,
             price: (botData.price || 0).toLocaleString('en-US'),
             rsi: parseFloat((ind4h.rsi || 50).toFixed(1)),
             wt: parseFloat((ind4h.wt1 || 0).toFixed(1)),
-            trend: (ind4h.trend || "Neutral") + " (4H)",
-            s_1h: supports[0]?.toLocaleString('en-US') || "---",
-            r_1h: resistances[0]?.toLocaleString('en-US') || "---",
-            s_4h: supports[1]?.toLocaleString('en-US') || supports[0]?.toLocaleString('en-US') || "---",
-            r_4h: resistances[1]?.toLocaleString('en-US') || resistances[0]?.toLocaleString('en-US') || "---",
-            verdict: botData.ai_text || botData.rev_type || "Sem análise disponível."
+            trend: (botData.confluence_label || ind4h.wt_dir || "Neutral") + " (4H)",
+            s_1h: fmt(botData.s_1h),
+            r_1h: fmt(botData.r_1h),
+            s_4h: fmt(botData.s_4h),
+            r_4h: fmt(botData.r_4h),
+            verdict: botData.rev_type || botData.confluence_label || "Sem análise disponível."
           });
           if (botData.symbol) setSelectedSymbol(botData.symbol);
         }
