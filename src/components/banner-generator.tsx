@@ -81,16 +81,20 @@ export const BannerGenerator = () => {
     setIsSyncing(true);
     try {
       if (activeBot === 'crypto') {
-        // Busca dados directamente do Railway (sem passar pelo /api/sync)
-        const res = await fetch(`${RAILWAY_URL}/latest`);
-        if (!res.ok) throw new Error('Railway /latest falhou');
-        const json = await res.json();
-        const symbols = json.symbols || {};
-        const allSyms = Object.keys(symbols);
-        if (allSyms.length > 0) setAvailableSymbols(allSyms);
-
         const sym = symbolOverride || selectedSymbol;
-        const botData = symbols[sym] || symbols[allSyms[0]];
+        const url = `/api/sync?bot=crypto${sym ? `&symbol=${encodeURIComponent(sym)}` : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Falha ao buscar dados do Redis');
+        const json = await res.json();
+        
+        const allSyms = DEFAULT_SYMBOLS.filter(s => json.allMatches?.includes(s));
+        if (allSyms.length > 0) {
+            setAvailableSymbols(allSyms);
+        } else {
+            setAvailableSymbols(DEFAULT_SYMBOLS);
+        }
+
+        const botData = json.match;
         if (botData) {
           const ind4h = botData['4h'] || {};
           const fmt = (v: number | undefined) => v ? v.toLocaleString('en-US') : '---';
@@ -104,9 +108,10 @@ export const BannerGenerator = () => {
             r_1h: fmt(botData.r_1h),
             s_4h: fmt(botData.s_4h),
             r_4h: fmt(botData.r_4h),
-            verdict: botData.rev_type || botData.confluence_label || "Sem análise disponível."
+            verdict: botData.rev_type || botData.confluence_label || "Sem análise disponível.",
+            setup: botData.setup
           });
-          if (botData.symbol) setSelectedSymbol(botData.symbol);
+          if (botData.symbol || sym) setSelectedSymbol(botData.symbol || sym);
         }
 
         // Busca gráfico do Binance

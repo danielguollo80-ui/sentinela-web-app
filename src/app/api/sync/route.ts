@@ -1,30 +1,32 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@vercel/kv';
+import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
 
-const url = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL;
-const token = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN;
-
-const kv = (url && url.startsWith('https://') && token) ? createClient({ url, token }) : null;
-
-const AUTH_TOKEN = process.env.SYNC_AUTH_TOKEN || '';
 const RAILWAY_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinel-crypto-api-production.up.railway.app';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token');
+    const tokenParams = searchParams.get('token');
     const botType = searchParams.get('bot') || 'crypto';
 
-    if (token !== AUTH_TOKEN) {
+    const AUTH_TOKEN = (process.env.SYNC_AUTH_TOKEN || 'sentinela_2026_secure').trim();
+
+    if (tokenParams !== AUTH_TOKEN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const data = await request.json();
+    
+    const url = process.env.REDIS_URL || '';
+    const kv = url ? new Redis(url) : null;
 
     if (kv) {
-      await kv.set(`sentinela:${botType}`, data);
+      await kv.set(`sentinela:${botType}`, JSON.stringify(data));
+      await kv.quit();
     }
 
     return NextResponse.json({ success: true, bot: botType });
@@ -40,29 +42,27 @@ export async function GET(request: Request) {
     const botType = searchParams.get('bot') || 'crypto';
     const symbol = searchParams.get('symbol');
 
+    // Inicializa a conexão com o banco de dados
+    const url = process.env.REDIS_URL || '';
+    const kv = url ? new Redis(url) : null;
+
     // 1. TRY KV (cloud)
     let fullData: any = null;
     if (kv) {
       try {
-        fullData = await kv.get(`sentinela:${botType}`);
+        const raw = await kv.get(`sentinela:${botType}`);
+        if (raw) {
+            fullData = JSON.parse(raw);
+        }
+        await kv.quit();
       } catch (e) {
         console.warn('KV not available.');
       }
     }
 
-    // 2. FALLBACK: Railway API (crypto) or local file (football)
+    // 2. FALLBACK: Local file (football apenas) ou em caso de erro no Redis
     if (!fullData) {
-      if (botType === 'crypto') {
-        try {
-          const res = await fetch(`${RAILWAY_URL}/latest`, { next: { revalidate: 300 } });
-          if (res.ok) {
-            const json = await res.json();
-            fullData = json.symbols || {};
-          }
-        } catch (e) {
-          console.warn('Railway /latest fetch failed:', e);
-        }
-      } else if (botType === 'football') {
+      if (botType === 'football') {
         const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json');
         const legacyPath  = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_analysis_football.json');
         const filePath = fs.existsSync(resultsPath) ? resultsPath : (fs.existsSync(legacyPath) ? legacyPath : '');

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = "/api/sync";
 
 const QUICK_PICKS = ["BTC", "ETH", "SOL", "AVAX", "TAO", "SUI", "XRP"];
 
@@ -64,6 +64,76 @@ interface AnalysisResult {
   indicators_1d: IndicatorData;
   indicators_4h: IndicatorData;
   ai_analysis: string;
+  setup?: {
+    tipo: string;
+    score: number;
+    entrada: number;
+    stop: number;
+    alvo1: number;
+    alvo2: number;
+    rr: number;
+    fatores: string[];
+  };
+}
+
+function TradeSetupBlock({ setup }: { setup: NonNullable<AnalysisResult['setup']> }) {
+  if (setup.tipo === 'NEUTRO') return null;
+  const isLong = setup.tipo === 'LONG';
+  const colorClass = isLong ? 'sentinela-emerald' : 'rose-500';
+  const borderClass = isLong ? 'border-sentinela-emerald/30' : 'border-rose-500/30';
+  const bgClass = isLong ? 'bg-sentinela-emerald/10' : 'bg-rose-500/10';
+  const glowClass = isLong ? 'glow-emerald' : 'glow-rose';
+
+  return (
+    <Card className={`overflow-hidden border border-white/5 ${bgClass} glass-dark rounded-2xl`}>
+      <CardHeader className="pb-3 border-b border-white/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full bg-${colorClass} ${glowClass}`} />
+            <CardTitle className={`text-sm font-black text-${colorClass} uppercase tracking-widest`}>
+              POSSÍVEL {isLong ? 'FUNDO — PODE COMPRAR' : 'TOPO — PODE VENDER'}
+            </CardTitle>
+          </div>
+          <Badge className={`bg-${colorClass}/20 text-${colorClass} border-${colorClass}/30 font-black px-3 py-1`}>
+            {setup.score}/10
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-4">
+        {/* Confluences */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Confluências Detectadas:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {setup.fatores.map((f, i) => (
+              <span key={i} className="text-[10px] font-bold text-slate-300 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                • {f}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Levels */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5">
+            <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Entrada</p>
+            <p className="text-sm font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5">
+            <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Stop Loss</p>
+            <p className="text-sm font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5">
+            <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Alvo 1 (T1)</p>
+            <p className="text-sm font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-sentinela-blue/10 border border-sentinela-blue/20">
+            <p className="text-[9px] font-black text-sentinela-blue uppercase mb-1">Risk/Reward</p>
+            <p className="text-sm font-black text-sentinela-blue font-mono">{setup.rr.toFixed(1)}x</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function fmtPrice(v?: number | null, decimals = 2) {
@@ -232,18 +302,20 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 }
 
 export function CryptoAnalyzer() {
-  const [unlocked, setUnlocked] = useState(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("sentinel_auth") === "1";
+  const [unlocked, setUnlocked] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    if (sessionStorage.getItem("sentinel_auth") === "1") {
+      setUnlocked(true);
     }
-    return false;
-  });
+  }, []);
+
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   const analyze = useCallback(async (sym: string) => {
     const s = sym.trim().toUpperCase();
@@ -252,13 +324,13 @@ export function CryptoAnalyzer() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/analyze/${encodeURIComponent(s)}`);
+      const res = await fetch(`${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.detail ?? `HTTP ${res.status}`);
       }
-      const data: AnalysisResult = await res.json();
-      setResult(data);
+      const data = await res.json();
+      setResult(data.analysis);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro desconhecido");
     } finally {
@@ -288,6 +360,9 @@ export function CryptoAnalyzer() {
       <span className="text-red-400">ABAIXO</span>
     );
   })();
+
+  if (!isMounted) return null;
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-4 max-w-4xl">
@@ -467,6 +542,11 @@ export function CryptoAnalyzer() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Trade Setup Signal - NEW */}
+          {result.setup && result.setup.tipo !== 'NEUTRO' && (
+            <TradeSetupBlock setup={result.setup} />
+          )}
 
           {/* S/R Levels */}
           <div className="glass-dark rounded-2xl border border-white/5 p-4">

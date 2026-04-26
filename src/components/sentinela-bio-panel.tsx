@@ -14,25 +14,31 @@ interface SentinelaBioPanelProps {
   s_4h?: string;
   r_4h?: string;
   verdict: string;
+  setup?: {
+    tipo: string;
+    score: number;
+    entrada: number;
+    stop: number;
+    alvo1: number;
+    alvo2: number;
+    rr: number;
+    fatores: string[];
+  };
 }
 
 export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
-  symbol,
-  price,
-  rsi,
-  wt,
-  trend,
-  s_1h,
-  r_1h,
-  s_4h,
-  r_4h,
-  verdict
+  symbol, price, rsi, wt, trend, s_1h, r_1h, s_4h, r_4h, verdict, setup
 }) => {
+  const isSetup = setup && setup.tipo !== 'NEUTRO';
+  const isLong = setup?.tipo === 'LONG';
+  const colorClass = isLong ? 'sentinela-emerald' : 'rose-500';
+  const glowClass = isLong ? 'glow-emerald' : 'glow-rose';
+
   return (
     <div className="relative z-10 grid grid-cols-12 gap-6 items-center glass backdrop-blur-xl border-t border-white/10 p-6 mt-auto rounded-b-[2.5rem]">
       
       {/* Symbol & Price Section */}
-      <div className="col-span-3 space-y-2">
+      <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-2`}>
         <div className="space-y-0.5">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">{symbol} ANALYSIS</p>
           <p className="text-4xl font-black text-sentinela-blue tracking-tighter text-glow">${price}</p>
@@ -43,44 +49,61 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
         </div>
       </div>
 
-      {/* Technical Indicators */}
-      <div className="col-span-3 space-y-4 border-l border-white/5 pl-8 pr-8">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] font-mono whitespace-nowrap">RSI (14)</span>
-          <span className="text-3xl font-black text-white italic text-glow">{rsi}</span>
+      {/* Trade Setup Section - NEW */}
+      {isSetup && (
+        <div className="col-span-4 border-l border-white/5 pl-6 pr-2 space-y-2">
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full bg-${colorClass} ${glowClass}`} />
+                 <p className={`text-[10px] font-black text-${colorClass} uppercase tracking-[0.1em] font-mono`}>
+                    POSSÍVEL {isLong ? 'FUNDO (LONG)' : 'TOPO (SHORT)'}
+                 </p>
+              </div>
+              <span className={`text-[10px] font-black bg-${colorClass}/20 text-${colorClass} px-2 py-0.5 rounded-md border border-${colorClass}/30`}>
+                 {setup.score}/10
+              </span>
+           </div>
+           
+           <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
+              <div className="flex justify-between border-b border-white/5 pb-1">
+                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Entrada</span>
+                 <span className="text-[11px] font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1">
+                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Target 1</span>
+                 <span className="text-[11px] font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between pt-1">
+                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Stop Loss</span>
+                 <span className="text-[11px] font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between pt-1">
+                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">R/R Ratio</span>
+                 <span className="text-[11px] font-black text-sentinela-blue font-mono">{setup.rr.toFixed(1)}x</span>
+              </div>
+           </div>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] font-mono whitespace-nowrap">WAVETREND</span>
-          <span className="text-3xl font-black text-white italic text-glow">{wt}</span>
-        </div>
-      </div>
+      )}
 
-      {/* Market Levels Grid */}
-      <div className="col-span-3 grid grid-cols-1 gap-4 border-l border-white/5 pl-8">
-        <div className="space-y-1">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">MACRO LEVELS (4H)</p>
-          <div className="flex justify-between items-center text-lg">
-             <span className="text-rose-500 font-black tracking-tight text-glow">R: ${r_4h || "---"}</span>
-             <span className="text-sentinela-emerald font-black tracking-tight text-glow">S: ${s_4h || "---"}</span>
-          </div>
+      {/* Technical Indicators */}
+      <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-4 border-l border-white/5 ${isSetup ? 'pl-6' : 'pl-8'} pr-2`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">RSI (14)</span>
+          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic text-glow`}>{rsi}</span>
         </div>
-        <div className="h-px bg-white/5 w-full" />
-        <div className="space-y-1">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">INTRADAY (1H)</p>
-          <div className="flex justify-between items-center text-base">
-             <span className="text-rose-400 font-black tracking-tight">R: ${r_1h || "---"}</span>
-             <span className="text-emerald-400 font-black tracking-tight">S: ${s_1h || "---"}</span>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">WT</span>
+          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic text-glow`}>{wt}</span>
         </div>
       </div>
 
       {/* AI Verdict Section */}
-      <div className="col-span-3 flex flex-col items-start gap-3 border-l border-white/5 pl-8">
+      <div className={`${isSetup ? 'col-span-4' : 'col-span-6'} flex flex-col items-start gap-3 border-l border-white/5 pl-8`}>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-sentinela-blue glow-blue" />
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">SENTINELAAI VERDICT</p>
         </div>
-        <p className="text-xs font-bold text-slate-200 leading-relaxed tracking-tight italic">
+        <p className={`${isSetup ? 'text-[10px]' : 'text-xs'} font-bold text-slate-200 leading-tight tracking-tight italic line-clamp-3`}>
           "{verdict}"
         </p>
       </div>
