@@ -96,37 +96,28 @@ export const BannerGenerator = () => {
 
         const botData = json.match;
         if (botData) {
-          const ind4h = botData['4h'] || {};
+          const ind4h = botData['indicators_4h'] || botData['4h'] || {};
           const fmt = (v: number | undefined) => v ? v.toLocaleString('en-US') : '---';
           setCryptoData({
             symbol: botData.symbol || sym,
             price: (botData.price || 0).toLocaleString('en-US'),
             rsi: parseFloat((ind4h.rsi || 50).toFixed(1)),
             wt: parseFloat((ind4h.wt1 || 0).toFixed(1)),
-            trend: (botData.confluence_label || ind4h.wt_dir || "Neutral") + " (4H)",
+            trend: (botData.confluence_label || ind4h.wt_dir || "Neutral") + " (1H/4H)",
             s_1h: fmt(botData.s_1h),
             r_1h: fmt(botData.r_1h),
             s_4h: fmt(botData.s_4h),
             r_4h: fmt(botData.r_4h),
-            verdict: botData.rev_type || botData.confluence_label || "Sem análise disponível.",
+            verdict: botData.ai_analysis || botData.rev_type || botData.confluence_label || "Sem análise disponível.",
             setup: botData.setup
           });
           if (botData.symbol || sym) setSelectedSymbol(botData.symbol || sym);
         }
 
-        // Busca gráfico do Binance
-        try {
-          const binSym = sym.replace('/', '');
-          const binRes = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=1h&limit=500`);
-          if (binRes.ok) {
-            const klines = await binRes.json();
-            setHistoryData(klines.map((k: any) => ({
-              time: k[0] / 1000,
-              open: parseFloat(k[1]), high: parseFloat(k[2]),
-              low: parseFloat(k[3]),  close: parseFloat(k[4])
-            })));
-          }
-        } catch { /* gráfico opcional */ }
+        // Usa o histórico do gráfico que já vem da nossa API
+        if (json.history && json.history.length > 0) {
+          setHistoryData(json.history);
+        }
 
       } else {
         // Football: continua a usar /api/sync (requer PC ligado)

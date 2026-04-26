@@ -84,33 +84,41 @@ export async function GET(request: Request) {
     }
 
     if (botType === 'crypto') {
-      const selectedSymbol = symbol || Object.keys(fullData)[0];
+      // Sanitizar símbolo: BTC/USDT -> BTC
+      const shortSymbol = symbol ? symbol.split('/')[0].toUpperCase() : null;
+      const selectedSymbol = shortSymbol || Object.keys(fullData)[0];
       const symbolData = fullData[selectedSymbol];
 
       if (!symbolData) {
-        return NextResponse.json({ error: 'Symbol not found.' }, { status: 404 });
+        return NextResponse.json({ error: `Symbol ${selectedSymbol} not found.` }, { status: 404 });
       }
 
       // Fetch chart data from Binance
+      let history = [];
       try {
-        const binanceSymbol = symbolData.symbol.replace('/', '');
+        const binanceSymbol = (symbolData.symbol || selectedSymbol).replace('/', '').replace(':USDT', '');
         const binanceRes = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1h&limit=500`);
         if (binanceRes.ok) {
           const klines = await binanceRes.json();
-          const history = klines.map((k: any) => ({
+          history = klines.map((k: any) => ({
             time: k[0] / 1000,
             open: parseFloat(k[1]),
             high: parseFloat(k[2]),
             low: parseFloat(k[3]),
             close: parseFloat(k[4])
           }));
-          return NextResponse.json({ analysis: symbolData, history, allSymbols: Object.keys(fullData) });
         }
       } catch (fetchErr) {
         console.error('Binance fetch error:', fetchErr);
       }
 
-      return NextResponse.json({ analysis: symbolData, history: [], allSymbols: Object.keys(fullData) });
+      return NextResponse.json({ 
+        analysis: symbolData, 
+        match: symbolData, // Para o BannerGenerator
+        history, 
+        allSymbols: Object.keys(fullData),
+        allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`) // Para o BannerGenerator
+      });
     }
 
     return NextResponse.json(fullData);
