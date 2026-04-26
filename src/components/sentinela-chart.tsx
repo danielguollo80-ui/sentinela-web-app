@@ -73,7 +73,7 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
             lineWidth: 3,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'RESISTANCE 4H',
+            title: 'RESISTÊNCIA 4H',
         });
     }
 
@@ -84,7 +84,7 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
             lineWidth: 3,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'SUPPORT 4H',
+            title: 'SUPORTE 4H',
         });
     }
 
@@ -92,22 +92,22 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
     if (r_1h) {
         candlestickSeries.createPriceLine({
             price: r_1h,
-            color: '#f43f5e',
+            color: '#fb7185',
             lineWidth: 1,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'RESISTANCE 1H',
+            title: 'RESISTÊNCIA 1H',
         });
     }
 
     if (s_1h) {
         candlestickSeries.createPriceLine({
             price: s_1h,
-            color: '#10b981',
+            color: '#34d399',
             lineWidth: 1,
             lineStyle: LineStyle.Solid,
             axisLabelVisible: true,
-            title: 'SUPPORT 1H',
+            title: 'SUPORTE 1H',
         });
     }
 
