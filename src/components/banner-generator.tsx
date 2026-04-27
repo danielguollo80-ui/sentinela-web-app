@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw, Bitcoin, Trophy, ChevronDown } from 'lucide-react';
 
-const RAILWAY_URL = 'https://sentinel-crypto-api-production.up.railway.app';
 const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'TAO/USDT', 'SUI/USDT', 'XRP/USDT'];
 
 export const BannerGenerator = () => {
@@ -37,7 +36,8 @@ export const BannerGenerator = () => {
     r_1h: "75,999",
     s_4h: "73,200",
     r_4h: "78,500",
-    verdict: "CONSOLIDATION NEUTRAL - No reversal triggers detected at current levels. WaveTrend indicates stability."
+    verdict: "CONSOLIDATION NEUTRAL - No reversal triggers detected at current levels. WaveTrend indicates stability.",
+    setup: null as any
   });
 
   const [footballData, setFootballData] = useState({

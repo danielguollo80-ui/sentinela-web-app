@@ -3,8 +3,6 @@ import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
 
-const RAILWAY_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinel-crypto-api-production.up.railway.app';
-
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -31,22 +29,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, bot: botType });
   } catch (error) {
-    console.error('Post sync error:', error);
-    return NextResponse.json({ error: 'Error saving data.' }, { status: 500 });
+    console.error('POST Sync error:', error);
+    return NextResponse.json({ error: 'Failed to sync data' }, { status: 500 });
   }
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const botType = searchParams.get('bot') || 'crypto';
     const symbol = searchParams.get('symbol');
+    const botType = searchParams.get('bot') || 'crypto';
 
-    // Inicializa a conexão com o banco de dados
     const url = process.env.REDIS_URL || '';
     const kv = url ? new Redis(url) : null;
 
-    // 1. TRY KV (cloud)
     let fullData: any = null;
     if (kv) {
       try {
@@ -60,23 +56,22 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. FALLBACK: Local file (football apenas) ou em caso de erro no Redis
+    // Local fallback for testing without Redis
     if (!fullData) {
       if (botType === 'football') {
         const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json');
-        const legacyPath  = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_analysis_football.json');
-        const filePath = fs.existsSync(resultsPath) ? resultsPath : (fs.existsSync(legacyPath) ? legacyPath : '');
-        if (filePath) {
-          fullData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        }
+        if (fs.existsSync(resultsPath)) fullData = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+      } else {
+        const DATA_DIR = path.join(process.cwd(), 'data');
+        const SYNC_FILE = path.join(DATA_DIR, 'bot_sync.json');
+        if (fs.existsSync(SYNC_FILE)) fullData = JSON.parse(fs.readFileSync(SYNC_FILE, 'utf8'));
       }
     }
 
-    if (!fullData || Object.keys(fullData).length === 0) {
-      return NextResponse.json({ error: `No ${botType} data found.` }, { status: 404 });
+    if (!fullData) {
+      return NextResponse.json({ error: 'No data available.' }, { status: 404 });
     }
 
-    // 3. PROCESS
     if (botType === 'football') {
       const selectedMatch = symbol || Object.keys(fullData)[0];
       const matchData = fullData[selectedMatch];
@@ -84,45 +79,220 @@ export async function GET(request: Request) {
     }
 
     if (botType === 'crypto') {
-      // Sanitizar símbolo: BTC/USDT -> BTC
-      const shortSymbol = symbol ? symbol.split('/')[0].toUpperCase() : null;
-      const selectedSymbol = shortSymbol || Object.keys(fullData)[0];
+      // Suporta ambos os formatos: "BTC" e "BTC/USDT"
+      const resolveSymbol = (sym: string | null): string => {
+        if (!sym) return Object.keys(fullData)[0];
+        if (fullData[sym]) return sym;
+        const withUsdt = sym.includes('/') ? sym : `${sym}/USDT`;
+        if (fullData[withUsdt]) return withUsdt;
+        const short = sym.split('/')[0].toUpperCase();
+        if (fullData[short]) return short;
+        return Object.keys(fullData)[0];
+      };
+      const selectedSymbol = resolveSymbol(symbol);
       const symbolData = fullData[selectedSymbol];
 
       if (!symbolData) {
-        return NextResponse.json({ error: `Symbol ${selectedSymbol} not found.` }, { status: 404 });
+        // MULTI-EXCHANGE REAL-TIME FALLBACK
+        try {
+          const cleanSymbol = selectedSymbol.replace('/', '').replace(':USDT', '').toUpperCase();
+          const pair = cleanSymbol.endsWith('USDT') ? cleanSymbol : cleanSymbol + 'USDT';
+          const cleanBase = cleanSymbol.replace('USDT', '');
+          
+          let klines: any[] = [];
+          let source = "Bybit";
+          const headers = { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          };
+
+          // 1. TRY BYBIT
+          try {
+            const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=1000`, { headers, next: { revalidate: 0 } });
+            if (res.ok) {
+              const json = await res.json();
+              if (json.retCode === 0 && json.result?.list?.length > 0) {
+                klines = json.result.list.reverse();
+                source = "Bybit";
+              }
+            }
+          } catch(e) {}
+
+          // 2. TRY CRYPTOCOMPARE (Ultimate Fallback)
+          if (klines.length === 0) {
+            try {
+              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1000&api_key=4b4869894e6a454d6239121f1e946a4869894e6a454d6239121f1e946a486989`, { headers, next: { revalidate: 0 } });
+              if (res.ok) {
+                const json = await res.json();
+                if (json.Response === "Success" && json.Data?.Data?.length > 0) {
+                  klines = json.Data.Data.map((d: any) => [
+                    d.time * 1000, d.open, d.high, d.low, d.close, d.volumeto
+                  ]);
+                  source = "CryptoCompare";
+                }
+              }
+            } catch(e) {}
+          }
+
+          if (klines.length === 0) {
+            return NextResponse.json({ error: `Moeda "${cleanSymbol}" não encontrada.` }, { status: 404 });
+          }
+
+          const highs = klines.map((k: any) => parseFloat(k[2]));
+          const lows = klines.map((k: any) => parseFloat(k[3]));
+          const closes = klines.map((k: any) => parseFloat(k[4]));
+          const price = closes[closes.length - 1];
+          
+          const { calculateRSI, calculateMACD, calculateBB, calculateEMA, calculateADX, calculateATR } = await import('@/lib/indicators');
+          const rsi = calculateRSI(closes, 14);
+          const macd = calculateMACD(closes);
+          const bb = calculateBB(closes);
+          const adxData = calculateADX(highs, lows, closes, 14);
+          const atr = calculateATR(highs, lows, closes, 14).pop() ?? 0;
+          const ema21 = calculateEMA(closes, 21).pop() ?? 0;
+          const ema50 = calculateEMA(closes, 50).pop() ?? 0;
+          const ema200 = calculateEMA(closes, 200).pop() ?? 0;
+          const poc = bb.upper - (bb.upper - bb.lower) / 2;
+
+          let emaPos = "NEUTRO";
+          if (price > ema21 && ema21 > ema50 && ema50 > ema200) emaPos = "BULLISH FORTE";
+          else if (price > ema200) emaPos = "BULLISH";
+          else if (price < ema21 && ema21 < ema50 && ema50 < ema200) emaPos = "BEARISH FORTE";
+          else if (price < ema200) emaPos = "BEARISH";
+
+          const prevH = highs[highs.length - 2] || price;
+          const prevL = lows[lows.length - 2] || price;
+          const prevC = closes[closes.length - 2] || price;
+          const pp = (prevH + prevL + prevC) / 3;
+          const r1 = (2 * pp) - prevL;
+          const s1 = (2 * pp) - prevH;
+          const r2 = pp + (prevH - prevL);
+          const s2 = pp - (prevH - prevL);
+          const r3 = r1 + (prevH - prevL);
+          const s3 = s1 - (prevH - prevL);
+
+          const realTimeData = {
+            symbol: selectedSymbol,
+            price: price,
+            poc: poc,
+            supports: [s1, s2, s3].sort((a, b) => b - a), // Descending
+            resistances: [r1, r2, r3].sort((a, b) => a - b), // Ascending
+            indicators_1d: {
+              rsi, macd_cross: macd.cross, macd_above_zero: macd.aboveZero,
+              bb_position: bb.position, bb_upper: bb.upper, bb_lower: bb.lower,
+              ema_position: emaPos, ema21, ema50, ema200,
+              adx: adxData.adx, atr: atr, poc_pivot: poc,
+              plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : (adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 100,
+              minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : (adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 100
+            },
+            indicators_4h: { 
+              rsi: rsi, 
+              vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL", 
+              wt1: macd.aboveZero ? 10 : -10, 
+              wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
+              macd_cross: macd.cross
+            },
+            history: klines.map((k: any) => ({
+              time: parseInt(k[0]) / 1000,
+              open: parseFloat(k[1]), high: parseFloat(k[2]),
+              low: parseFloat(k[3]),  close: parseFloat(k[4])
+            })),
+            fng: 50,
+            fng_label: "Neutral",
+            ai_analysis: `[Fonte: ${source}] Analisando tendências para ${selectedSymbol}...`
+          };
+
+          // AI ANALYSIS
+          try {
+            const Anthropic = (await import('@anthropic-ai/sdk')).default;
+            const anthropic = new Anthropic({
+              apiKey: process.env.ANTHROPIC_API_KEY || ''
+            });
+
+            const prompt = `Analise a criptomoeda ${selectedSymbol} (Fonte: ${source}):
+            - Preço Atual: $${price}
+            - RSI (1D): ${rsi.toFixed(2)}
+            - Tendência EMA: ${emaPos}
+            - Força da Tendência (ADX): ${adxData.adx.toFixed(2)}
+            - POC (Pivot): $${poc.toFixed(6)}
+            - Direcional: DI+ (${adxData.plusDI.toFixed(2)}) / DI- (${adxData.minusDI.toFixed(2)})
+            
+            Forneça um relatório estratégico em Português (Brasil).
+            Diga se é hora de COMPRA, VENDA ou AGUARDAR.
+            Seja direto e use o estilo "Sentinela Crypto".`;
+
+            const msg = await anthropic.messages.create({
+              model: "claude-3-5-sonnet-20241022",
+              max_tokens: 1000,
+              messages: [{ role: "user", content: prompt }]
+            });
+
+            if (msg.content[0].type === 'text') {
+              realTimeData.ai_analysis = msg.content[0].text;
+            }
+          } catch (aiErr) {
+            realTimeData.ai_analysis = `[Fonte: ${source}] Análise concluída. RSI: ${rsi.toFixed(2)}. Tendência: ${emaPos}. POC: $${poc.toFixed(6)}.`;
+          }
+          return NextResponse.json({
+            analysis: realTimeData,
+            match: realTimeData,
+            history: realTimeData.history,
+            allSymbols: Object.keys(fullData),
+            allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`)
+          });
+        } catch (err) {
+          console.error('Real-time fallback error:', err);
+          return NextResponse.json({ error: 'Erro ao processar análise em tempo real.' }, { status: 500 });
+        }
       }
 
-      // Fetch chart data from Binance
-      let history = [];
+      // Prioritize chart data from the bot payload
+      let history = symbolData.history || [];
+      
+      if (history.length === 0) {
+        try {
+          const cleanSymbol = (symbolData.symbol || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
+          const cleanBase = cleanSymbol.replace('USDT', '');
+          const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.Response === "Success" && json.Data?.Data) {
+              history = json.Data.Data.map((d: any) => ({
+                time: d.time,
+                open: d.open,
+                high: d.high,
+                low: d.low,
+                close: d.close
+              }));
+            }
+          }
+        } catch(e) {}
+      }
+
+      // Live Price Override for Cached Symbols
       try {
-        const binanceSymbol = (symbolData.symbol || selectedSymbol).replace('/', '').replace(':USDT', '');
-        const binanceRes = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1h&limit=500`);
-        if (binanceRes.ok) {
-          const klines = await binanceRes.json();
-          history = klines.map((k: any) => ({
-            time: k[0] / 1000,
-            open: parseFloat(k[1]),
-            high: parseFloat(k[2]),
-            low: parseFloat(k[3]),
-            close: parseFloat(k[4])
-          }));
+        const cleanBase = (symbolData.symbol || selectedSymbol).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
+        const priceRes = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cleanBase}&tsyms=USDT`, { next: { revalidate: 0 } });
+        if (priceRes.ok) {
+          const priceData = await priceRes.json();
+          if (priceData.USDT) {
+            symbolData.price = parseFloat(priceData.USDT);
+          }
         }
-      } catch (fetchErr) {
-        console.error('Binance fetch error:', fetchErr);
+      } catch(e) {
+        console.warn('Live price fetch failed:', e);
       }
 
       return NextResponse.json({ 
         analysis: symbolData, 
-        match: symbolData, // Para o BannerGenerator
+        match: symbolData, 
         history, 
         allSymbols: Object.keys(fullData),
-        allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`) // Para o BannerGenerator
+        allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`)
       });
     }
 
     return NextResponse.json(fullData);
-
   } catch (error) {
     console.error('Sync error:', error);
     return NextResponse.json({ error: 'Error reading bot data.' }, { status: 500 });

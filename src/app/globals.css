@@ -135,6 +135,10 @@
     @apply shadow-[0_0_20px_rgba(16,185,129,0.3)];
   }
 
+  .glow-rose {
+    @apply shadow-[0_0_20px_rgba(244,63,94,0.3)];
+  }
+
   .text-glow {
     text-shadow: 0 0 12px currentColor;
   }
