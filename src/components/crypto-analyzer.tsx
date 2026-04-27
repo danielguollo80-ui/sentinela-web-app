@@ -138,9 +138,14 @@ function TradeSetupBlock({ setup }: { setup: NonNullable<AnalysisResult['setup']
 
 function fmtPrice(v?: number | null, decimals = 2) {
   if (v == null) return "—";
-  return v >= 1000
-    ? v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : v.toFixed(v >= 1 ? decimals : 6);
+  if (v >= 1000) {
+    return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  if (v >= 1) {
+    return v.toFixed(decimals);
+  }
+  // Para moedas muito baratas (PEPE, SHIB, etc) usamos até 10 casas decimais
+  return v.toFixed(10).replace(/\.?0+$/, "");
 }
 
 function fmtNum(v?: number | null, d = 1) {
@@ -275,12 +280,12 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div className="container mx-auto px-4 max-w-sm mt-24">
       <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/60 space-y-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
-          <span className="text-2xl font-black text-emerald-400">S</span>
+        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-emerald-500/20 mx-auto">
+          <img src="/logo-premium.png" alt="Sentinela Logo" className="w-full h-full object-cover scale-110" />
         </div>
         <div>
-          <h2 className="text-xl font-black text-white">Acesso Restrito</h2>
-          <p className="text-sm text-slate-500 mt-1">Introduz a password para continuar</p>
+          <h2 className="text-xl font-black text-white uppercase tracking-tighter">SENTINELA <span className="text-emerald-400">PRO</span></h2>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Acesso Restrito — Elite Market Analysis</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input
@@ -318,7 +323,7 @@ export function CryptoAnalyzer() {
   const [error, setError] = useState<string | null>(null);
 
   const analyze = useCallback(async (sym: string) => {
-    const s = sym.trim().toUpperCase();
+    const s = sym.trim().toUpperCase().replace("USDT", "").replace("/", "");
     if (!s) return;
     setLoading(true);
     setError(null);
@@ -435,7 +440,7 @@ export function CryptoAnalyzer() {
             <div className="text-right">
               <div className="text-2xl font-mono font-black text-sentinela-blue text-glow leading-none">${fmtPrice(result.price)}</div>
               <div className={`text-[10px] font-black tracking-widest mt-1 ${fngColor(result.fng)}`}>
-                FNG {result.fng} • {result.fng_label.toUpperCase()}
+                FNG {result.fng} • {(result.fng_label ?? "Neutral").toUpperCase()}
               </div>
             </div>
           </div>

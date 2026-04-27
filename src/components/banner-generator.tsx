@@ -163,22 +163,22 @@ export const BannerGenerator = () => {
         {/* Quick Actions Toolbar - NEW */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-4 glass-dark rounded-2xl border border-white/10 glow-blue">
            <div className="flex items-center gap-4">
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5">
-                 <button 
-                  onClick={() => setActiveBot('crypto')}
-                  className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black rounded-lg transition-all ${activeBot === 'crypto' ? 'bg-sentinela-blue text-white shadow-lg glow-blue' : 'text-slate-500 hover:text-slate-300'}`}
-                 >
-                    <Bitcoin className="w-4 h-4" />
-                    CRYPTO
-                 </button>
-                 <button 
-                  onClick={() => setActiveBot('football')}
-                  className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black rounded-lg transition-all ${activeBot === 'football' ? 'bg-sentinela-emerald text-white shadow-lg glow-emerald' : 'text-slate-500 hover:text-slate-300'}`}
-                 >
-                    <Trophy className="w-4 h-4" />
-                    SPORTS
-                 </button>
-              </div>
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5 w-full sm:w-auto">
+               <button 
+                onClick={() => setActiveBot('crypto')}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black rounded-lg transition-all ${activeBot === 'crypto' ? 'bg-sentinela-blue text-white shadow-lg glow-blue' : 'text-slate-500 hover:text-slate-300'}`}
+               >
+                  <Bitcoin className="w-4 h-4" />
+                  CRYPTO
+               </button>
+               <button 
+                onClick={() => setActiveBot('football')}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black rounded-lg transition-all ${activeBot === 'football' ? 'bg-sentinela-emerald text-white shadow-lg glow-emerald' : 'text-slate-500 hover:text-slate-300'}`}
+               >
+                  <Trophy className="w-4 h-4" />
+                  SPORTS
+               </button>
+            </div>
 
               <div className="h-8 w-px bg-white/10 hidden md:block" />
 
@@ -201,11 +201,11 @@ export const BannerGenerator = () => {
               </div>
            </div>
 
-           <div className="flex items-center gap-3 w-full sm:w-auto">
+           <div className="flex flex-col items-center gap-3 w-full">
               <ShadButton 
                  onClick={() => handleSync()} 
                  disabled={isSyncing}
-                 className={`flex-1 sm:flex-none font-black h-12 px-8 gap-2 transition-all active:scale-95 ${activeBot === 'crypto' ? 'bg-sentinela-blue hover:bg-sentinela-blue/80 glow-blue' : 'bg-sentinela-emerald hover:bg-sentinela-emerald/80 glow-emerald'}`}
+                 className={`w-full font-black h-12 px-8 gap-2 transition-all active:scale-95 ${activeBot === 'crypto' ? 'bg-sentinela-blue hover:bg-sentinela-blue/80 glow-blue' : 'bg-sentinela-emerald hover:bg-sentinela-emerald/80 glow-emerald'}`}
               >
                  <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
                  {isSyncing ? 'SINCRONIZANDO...' : 'ATUALIZAR DADOS'}
@@ -213,7 +213,7 @@ export const BannerGenerator = () => {
 
               <ShadButton 
                  onClick={onExport} 
-                 className="flex-1 sm:flex-none h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                 className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
               >
                  <Download className="w-5 h-5" />
                  BAIXAR PARA TWITTER (X)
@@ -328,9 +328,9 @@ export const BannerGenerator = () => {
                        {activeBot === 'crypto' ? (
                           <>
                              <div className="absolute top-8 left-8 flex items-center gap-3 z-50">
-                                <div className="w-9 h-9 bg-sentinela-blue rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.4)]">
-                                   <span className="text-sm font-black text-white">S</span>
-                                </div>
+                                 <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(14,165,233,0.4)]">
+                                    <img src="/logo-premium.png" alt="Logo" className="w-full h-full object-cover scale-110" />
+                                 </div>
                                 <div>
                                    <h3 className="text-sm font-black text-white leading-none tracking-tighter text-glow">SENTINELA AI</h3>
                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter italic">Elite Market Analysis Engine</p>

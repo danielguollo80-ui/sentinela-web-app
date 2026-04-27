@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+// Version 1.0.5 - Branding & Search Fix
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SwRegister } from "@/components/sw-register";
@@ -38,7 +39,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#10b981" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" href="/icon-192.svg" />
+        <link rel="apple-touch-icon" href="/logo-premium.png" />
       </head>
       <body className="min-h-full flex flex-col">
         <SwRegister />

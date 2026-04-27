@@ -81,13 +81,14 @@ export async function GET(request: Request) {
     if (botType === 'crypto') {
       // Suporta ambos os formatos: "BTC" e "BTC/USDT"
       const resolveSymbol = (sym: string | null): string => {
-        if (!sym) return Object.keys(fullData)[0];
+        if (!sym) return Object.keys(fullData)[0] || "BTC/USDT";
         if (fullData[sym]) return sym;
         const withUsdt = sym.includes('/') ? sym : `${sym}/USDT`;
         if (fullData[withUsdt]) return withUsdt;
         const short = sym.split('/')[0].toUpperCase();
         if (fullData[short]) return short;
-        return Object.keys(fullData)[0];
+        // Se não achou no cache, retorna o próprio símbolo para tentar o Live Fallback
+        return sym.toUpperCase().includes('USDT') ? sym.toUpperCase() : `${sym.toUpperCase()}/USDT`;
       };
       const selectedSymbol = resolveSymbol(symbol);
       const symbolData = fullData[selectedSymbol];
@@ -106,22 +107,38 @@ export async function GET(request: Request) {
             'Accept': 'application/json'
           };
 
-          // 1. TRY BYBIT
+          // 1. TRY BYBIT LINEAR (Futures)
           try {
             const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=1000`, { headers, next: { revalidate: 0 } });
             if (res.ok) {
               const json = await res.json();
               if (json.retCode === 0 && json.result?.list?.length > 0) {
                 klines = json.result.list.reverse();
-                source = "Bybit";
+                source = "Bybit Linear";
               }
             }
           } catch(e) {}
 
-          // 2. TRY CRYPTOCOMPARE (Ultimate Fallback)
+          // 2. TRY BYBIT SPOT (Fallback for smaller coins)
           if (klines.length === 0) {
             try {
-              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1000&api_key=4b4869894e6a454d6239121f1e946a4869894e6a454d6239121f1e946a486989`, { headers, next: { revalidate: 0 } });
+              const res = await fetch(`https://api.bytick.com/v5/market/kline?category=spot&symbol=${pair}&interval=60&limit=1000`, { headers, next: { revalidate: 0 } });
+              if (res.ok) {
+                const json = await res.json();
+                if (json.retCode === 0 && json.result?.list?.length > 0) {
+                  klines = json.result.list.reverse();
+                  source = "Bybit Spot";
+                }
+              }
+            } catch(e) {}
+          }
+
+          // 3. TRY CRYPTOCOMPARE (Ultimate Global Fallback)
+          if (klines.length === 0) {
+            try {
+              // Limpeza extra para CryptoCompare (ex: WOOUSDT -> WOO)
+              const ccBase = cleanBase.replace('USDT', '');
+              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=500`, { headers, next: { revalidate: 0 } });
               if (res.ok) {
                 const json = await res.json();
                 if (json.Response === "Success" && json.Data?.Data?.length > 0) {
@@ -206,8 +223,12 @@ export async function GET(request: Request) {
           try {
             const Anthropic = (await import('@anthropic-ai/sdk')).default;
             const anthropic = new Anthropic({
-              apiKey: process.env.ANTHROPIC_API_KEY || ''
+              apiKey: process.env.ANTHROPIC_API_KEY
             });
+
+            if (!anthropic.apiKey) {
+              throw new Error("API Key ausente");
+            }
 
             const prompt = `Analise a criptomoeda ${selectedSymbol} (Fonte: ${source}):
             - Preço Atual: $${price}

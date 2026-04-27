@@ -12,26 +12,29 @@ export default function CryptoPage() {
 
       <div className="relative pt-10 pb-24">
         {/* Header */}
-        <div className="container mx-auto px-8 mb-8 flex items-center justify-between max-w-4xl">
+        <div className="container mx-auto px-6 mb-8 flex flex-col items-center text-center gap-4 max-w-4xl">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.3)] border border-emerald-500/20">
+            <img 
+              src="/logo-premium.png" 
+              alt="Sentinela Logo" 
+              className="w-full h-full object-cover scale-110"
+            />
+          </div>
+          
           <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)]">
-                <span className="text-sm font-black text-slate-950">S</span>
-              </div>
-              <h1 className="text-3xl font-black tracking-tighter text-white lg:text-4xl">
-                SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.4)" }}>CRYPTO</span>
-              </h1>
-            </div>
-            <p className="text-slate-600 text-xs font-bold tracking-[0.25em] uppercase pl-12">
+            <h1 className="text-3xl font-black tracking-tighter text-white">
+              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.4)" }}>PRO</span>
+            </h1>
+            <p className="text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">
               Análise técnica · Swing Trade · IA Claude
             </p>
           </div>
 
           <a
             href="/"
-            className="text-xs text-slate-500 hover:text-emerald-400 transition-colors font-mono"
+            className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors font-mono uppercase tracking-widest"
           >
-            ← voltar
+            ← voltar ao início
           </a>
         </div>
 
