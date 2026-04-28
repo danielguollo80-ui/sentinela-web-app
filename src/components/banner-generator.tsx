@@ -66,7 +66,6 @@ export const BannerGenerator = () => {
     const SCALE = 2;
     const W = 1200, H = 675;
 
-    // Helper para carregar imagem a partir de uma URL/dataURL
     const loadImg = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
@@ -76,11 +75,38 @@ export const BannerGenerator = () => {
 
     const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
 
-    try {
-      // 1. Captura o gráfico via API nativa do lightweight-charts ANTES de qualquer DOM change
-      const chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
+    // Aguarda 2 frames para garantir que o canvas terminou de pintar (necessário no iOS)
+    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      // 2. Esconde o chart container e captura o resto do banner com toPng (sem canvas = funciona iOS)
+    // 1. Captura o gráfico antes de qualquer mudança no DOM
+    let chartImgUrl: string | null = null;
+    try {
+      chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
+    } catch { /* ignora */ }
+
+    // Fallback: composite dos <canvas> diretamente do DOM
+    if (!chartImgUrl && chartContainer) {
+      try {
+        const canvases = Array.from(chartContainer.querySelectorAll('canvas')) as HTMLCanvasElement[];
+        if (canvases.length > 0) {
+          const first = canvases[0];
+          const cw = first.width || first.offsetWidth;
+          const ch = first.height || first.offsetHeight;
+          if (cw > 0 && ch > 0) {
+            const comp = document.createElement('canvas');
+            comp.width = cw; comp.height = ch;
+            const cctx = comp.getContext('2d')!;
+            cctx.fillStyle = '#020817';
+            cctx.fillRect(0, 0, cw, ch);
+            canvases.forEach(c => { try { if (c.width && c.height) cctx.drawImage(c, 0, 0, cw, ch); } catch { /* skip */ } });
+            chartImgUrl = comp.toDataURL('image/png');
+          }
+        }
+      } catch { /* ignora */ }
+    }
+
+    try {
+      // 2. Esconde o chart e captura banner sem canvas (funciona no iOS/Safari)
       if (chartContainer) chartContainer.style.visibility = 'hidden';
 
       const bannerDataUrl = await toPng(exportRef.current, {
@@ -92,31 +118,26 @@ export const BannerGenerator = () => {
 
       if (chartContainer) chartContainer.style.visibility = '';
 
-      // 3. Compõe banner + gráfico num <canvas> final
+      // 3. Compõe no canvas final: banner + gráfico sobreposto
       const canvas = document.createElement('canvas');
       canvas.width = W * SCALE;
       canvas.height = H * SCALE;
       const ctx = canvas.getContext('2d')!;
 
-      // Desenha o banner (fundo + header + bio panel, sem gráfico)
       const bannerImg = await loadImg(bannerDataUrl);
       ctx.drawImage(bannerImg, 0, 0, canvas.width, canvas.height);
 
-      // Sobrepõe o gráfico na posição correta
+      // Posição via offsetLeft/offsetTop (não é afetado pelo CSS transform do pai)
       if (chartImgUrl && chartContainer) {
-        const bannerRect = exportRef.current.getBoundingClientRect();
-        const chartRect = chartContainer.getBoundingClientRect();
-        const sx = W / bannerRect.width;
-        const sy = H / bannerRect.height;
-        const cx = (chartRect.left - bannerRect.left) * sx * SCALE;
-        const cy = (chartRect.top  - bannerRect.top)  * sy * SCALE;
-        const cw = chartRect.width  * sx * SCALE;
-        const ch = chartRect.height * sy * SCALE;
+        const ox = chartContainer.offsetLeft * SCALE;
+        const oy = chartContainer.offsetTop  * SCALE;
+        const ow = chartContainer.offsetWidth  * SCALE;
+        const oh = chartContainer.offsetHeight * SCALE;
         const chartImg = await loadImg(chartImgUrl);
-        ctx.drawImage(chartImg, cx, cy, cw, ch);
+        ctx.drawImage(chartImg, ox, oy, ow, oh);
       }
 
-      // 4. Export
+      // 4. Exporta
       const dataUrl = canvas.toDataURL('image/png');
       const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
