@@ -268,11 +268,11 @@ export async function GET(request: Request) {
       }
 
       // Prioritize chart data from the bot payload
-      let history = symbolData.history || [];
-      
+      let history = (symbolData.history as unknown[]) || [];
+
       if (history.length === 0) {
         try {
-          const cleanSymbol = (symbolData.symbol || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
+          const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
           const cleanBase = cleanSymbol.replace('USDT', '');
           const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } });
           if (res.ok) {
@@ -292,7 +292,7 @@ export async function GET(request: Request) {
 
       // Live Price Override for Cached Symbols
       try {
-        const cleanBase = (symbolData.symbol || selectedSymbol).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
+        const cleanBase = (((symbolData.symbol as string) || selectedSymbol)).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
         const priceRes = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cleanBase}&tsyms=USDT`, { next: { revalidate: 0 } });
         if (priceRes.ok) {
           const priceData = await priceRes.json();

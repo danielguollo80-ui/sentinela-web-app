@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 import { SentinelaChart, SentinelaChartHandle } from './sentinela-chart';
 import { SentinelaBioPanel } from './sentinela-bio-panel';
 import { MatchAnalysisPanel } from './match-analysis-panel';
@@ -59,29 +60,60 @@ export const BannerGenerator = () => {
 
   const onExport = async () => {
     if (exportRef.current === null) return;
-    // Use lightweight-charts native screenshot (works on Safari/mobile)
+
+    // 1. Get chart screenshot via lightweight-charts native API
     const chartImgUrl = chartRef.current?.takeScreenshot();
     const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
     let placeholder: HTMLImageElement | null = null;
+
     if (chartImgUrl && chartContainer) {
+      // Absolutely position chart image over the hidden container
+      const bannerRect = exportRef.current.getBoundingClientRect();
+      const chartRect = chartContainer.getBoundingClientRect();
       placeholder = document.createElement('img');
       placeholder.src = chartImgUrl;
-      placeholder.style.cssText = `width:100%;height:100%;display:block;object-fit:fill;`;
+      placeholder.style.cssText = [
+        'position:absolute',
+        `left:${chartRect.left - bannerRect.left}px`,
+        `top:${chartRect.top - bannerRect.top}px`,
+        `width:${chartRect.width}px`,
+        `height:${chartRect.height}px`,
+        'z-index:9999',
+        'display:block'
+      ].join(';');
+      exportRef.current.style.position = 'relative';
+      exportRef.current.appendChild(placeholder);
       chartContainer.style.visibility = 'hidden';
-      chartContainer.parentNode?.insertBefore(placeholder, chartContainer);
     }
+
     try {
-      const dataUrl = await toPng(exportRef.current, {
-        cacheBust: true,
-        pixelRatio: 3,
+      // 2. Use html2canvas (better iOS/Safari support than html-to-image)
+      const canvas = await html2canvas(exportRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
         width: 1200,
         height: 675,
-        style: { transform: 'scale(1)', borderRadius: '0' }
+        backgroundColor: '#020817',
+        logging: false,
       });
-      const link = document.createElement('a');
-      link.download = `sentinela-${activeBot}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
+
+      // 3. iOS Safari: use Web Share API or open in new tab
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS && navigator.share) {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], fileName, { type: 'image/png' });
+        await navigator.share({ files: [file], title: 'Sentinela Analysis' });
+      } else {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = dataUrl;
+        link.click();
+      }
     } catch (err) {
       console.error('Export error:', err);
     } finally {
