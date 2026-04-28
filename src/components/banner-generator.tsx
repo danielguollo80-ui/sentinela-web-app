@@ -78,7 +78,7 @@ export const BannerGenerator = () => {
     const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
 
     // Aguarda 2 frames para garantir que o canvas terminou de pintar (necessário no iOS)
-    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise<void>(r => requestAnimationFrame(() => { requestAnimationFrame(() => r()); }));
 
     // 1. Captura o gráfico antes de qualquer mudança no DOM
     let chartImgUrl: string | null = null;
