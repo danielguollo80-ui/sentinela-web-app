@@ -354,10 +354,48 @@ export const BannerGenerator = () => {
 
               {/* Modal para iOS: segurar a imagem para salvar */}
               {previewUrl && (
-                <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-4 p-4" onClick={() => setPreviewUrl(null)}>
-                  <p className="text-white text-sm font-bold">📱 Segure a imagem para salvar nas Fotos</p>
-                  <img src={previewUrl} alt="Export" className="max-w-full max-h-[80vh] rounded-xl shadow-2xl" />
-                  <p className="text-slate-400 text-xs">Toque fora para fechar</p>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+                  <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={() => setPreviewUrl(null)} />
+                  
+                  <div className="relative w-full max-w-4xl glass-dark rounded-[2.5rem] border border-white/10 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center gap-6 p-8 z-10">
+                    <div className="flex items-center justify-between w-full mb-2">
+                       <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-sentinela-blue animate-pulse" />
+                          <span className="text-xs font-black text-white tracking-[0.2em] uppercase">Exportação Concluída</span>
+                       </div>
+                       <button 
+                         onClick={() => setPreviewUrl(null)}
+                         className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all active:scale-90"
+                       >
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                       </button>
+                    </div>
+
+                    <div className="relative group">
+                       <img 
+                         src={previewUrl} 
+                         alt="Export" 
+                         className="max-w-full max-h-[60vh] rounded-2xl shadow-2xl border border-white/5 cursor-pointer ring-4 ring-sentinela-blue/20" 
+                       />
+                       <div className="absolute inset-0 bg-sentinela-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl flex items-center justify-center">
+                          <p className="text-white font-black text-xs uppercase tracking-widest bg-slate-950/80 px-4 py-2 rounded-full border border-white/20">📱 Segure para Salvar</p>
+                       </div>
+                    </div>
+
+                    <div className="text-center space-y-2">
+                       <p className="text-white text-sm font-black uppercase tracking-widest italic">A análise foi gerada com sucesso!</p>
+                       <p className="text-slate-400 text-[10px] font-bold max-w-xs mx-auto leading-relaxed">
+                         Toque e segure na imagem acima para salvar na sua galeria de fotos do iPhone.
+                       </p>
+                    </div>
+
+                    <ShadButton 
+                       onClick={() => setPreviewUrl(null)}
+                       className="w-full h-12 bg-white hover:bg-slate-100 text-slate-950 font-black rounded-xl shadow-lg transition-all active:scale-95"
+                    >
+                       CONCLUÍDO
+                    </ShadButton>
+                  </div>
                 </div>
               )}
            </div>
