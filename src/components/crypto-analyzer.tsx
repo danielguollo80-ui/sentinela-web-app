@@ -295,6 +295,19 @@ export function CryptoAnalyzer() {
         <Button type="submit" className="bg-blue-600 hover:bg-blue-500 px-8 h-14 text-lg font-bold rounded-xl text-white">ANALISAR</Button>
       </form>
 
+      {/* Quick Shortcuts */}
+      <div className="flex flex-wrap gap-2 mb-8 justify-center sm:justify-start">
+        {['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA'].map((coin) => (
+          <button
+            key={coin}
+            onClick={() => analyze(coin)}
+            className="px-4 py-1.5 rounded-full bg-slate-900/50 border border-white/10 text-xs font-black text-slate-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:text-emerald-400 transition-all uppercase tracking-widest shadow-sm"
+          >
+            {coin}
+          </button>
+        ))}
+      </div>
+
       {loading && <LoadingSkeleton />}
       {result && !loading && (
         <div className="space-y-6">
