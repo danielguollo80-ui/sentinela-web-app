@@ -2,7 +2,7 @@ import { BannerGenerator } from "@/components/banner-generator";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#060b12] text-slate-100 font-sans antialiased selection:bg-emerald-500/30">
+    <main className="min-h-screen overflow-x-hidden bg-[#060b12] text-slate-100 font-sans antialiased selection:bg-emerald-500/30">
       {/* Background gradients */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(16,185,129,0.14),transparent)] pointer-events-none" />
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_80%_80%,rgba(14,165,233,0.06),transparent)] pointer-events-none" />

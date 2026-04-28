@@ -27,6 +27,7 @@ export const BannerGenerator = () => {
   const chartRef = useRef<SentinelaChartHandle>(null);
   const [scale, setScale] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingJpg, setIsExportingJpg] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -266,8 +267,12 @@ export const BannerGenerator = () => {
 
     const updateScale = () => {
       if (containerRef.current) {
-        const availableWidth = containerRef.current.offsetWidth;
-        const newScale = isZoomed ? 1 : Math.min(1, availableWidth / 1200);
+        const aw = containerRef.current.offsetWidth;
+        const mobile = aw < 768;
+        setIsMobileView(mobile);
+        // Mobile: divide por 700 → escala ~0.56 em 390px → gráfico ~258px de altura
+        // Desktop: divide por 1200 → cabe na tela sem scroll
+        const newScale = isZoomed ? 1 : Math.min(1, aw / (mobile ? 700 : 1200));
         setScale(newScale);
       }
     };
@@ -437,13 +442,13 @@ export const BannerGenerator = () => {
                  </ShadButton>
               </div>
 
-              <div ref={containerRef} className={`w-full overflow-hidden pb-12 flex flex-col items-center ${isZoomed ? 'overflow-x-auto justify-start' : 'justify-center'}`}>
-                 <div 
-                   style={{ 
+              <div ref={containerRef} className={`w-full pb-12 flex flex-col ${(isZoomed || isMobileView) ? 'overflow-x-auto items-start' : 'overflow-hidden items-center justify-center'}`}>
+                 <div
+                   style={{
                      width: '1200px',
                      height: '675px',
                      transform: `scale(${scale})`,
-                     transformOrigin: isZoomed ? 'top left' : 'top center',
+                     transformOrigin: (isZoomed || isMobileView) ? 'top left' : 'top center',
                      marginBottom: `-${675 * (1 - scale)}px`,
                      transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                    }}
