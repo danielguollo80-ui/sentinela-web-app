@@ -79,9 +79,8 @@ interface AnalysisResult {
 function TradeSetupBlock({ setup }: { setup: NonNullable<AnalysisResult['setup']> }) {
   if (setup.tipo === 'NEUTRO') return null;
   const isLong = setup.tipo === 'LONG';
-  const colorClass = isLong ? 'sentinela-emerald' : 'rose-500';
-  const borderClass = isLong ? 'border-sentinela-emerald/30' : 'border-rose-500/30';
-  const colorClass = isLong ? 'emerald-400' : 'rose-400';
+  const colorClass = isLong ? 'text-emerald-400' : 'text-rose-400';
+  const borderClass = isLong ? 'border-emerald-500/30' : 'border-rose-500/30';
   const bgClass = isLong ? 'bg-emerald-950/20' : 'bg-rose-950/20';
 
   return (
@@ -334,9 +333,39 @@ export function CryptoAnalyzer() {
             </TabsContent>
           </Tabs>
 
-                       <span className="text-[10px] font-black text-sentinela-emerald uppercase">Supp {i + 1}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* S/R Levels */}
+            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald" />
+                Critical Support Levels
+              </h3>
+              <div className="space-y-3">
+                {result.supports.slice(0, 3).map((s: number, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-8 bg-emerald-500/30 rounded-full" />
+                      <span className="text-[10px] font-black text-emerald-400 uppercase">Support {i + 1}</span>
                     </div>
-                    <span className="text-xs font-mono font-black text-sentinela-emerald">${fmtPrice(s)}</span>
+                    <span className="text-sm font-mono font-black text-white">${fmtPrice(s)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 glow-rose" />
+                Critical Resistance Levels
+              </h3>
+              <div className="space-y-3">
+                {result.resistances.slice(0, 3).map((r: number, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-8 bg-rose-500/30 rounded-full" />
+                      <span className="text-[10px] font-black text-rose-400 uppercase">Resistance {i + 1}</span>
+                    </div>
+                    <span className="text-sm font-mono font-black text-white">${fmtPrice(r)}</span>
                   </div>
                 ))}
               </div>
