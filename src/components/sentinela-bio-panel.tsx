@@ -35,78 +35,70 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
   const glowClass = isLong ? 'glow-emerald' : 'glow-rose';
 
   return (
-    <div className="relative z-10 grid grid-cols-12 gap-4 items-center glass backdrop-blur-xl border-t border-white/10 p-4 mt-auto rounded-b-[2.5rem]">
+    <div className="relative z-10 grid grid-cols-12 gap-0 items-stretch glass backdrop-blur-3xl border-t border-white/10 mt-auto rounded-b-[2.5rem] overflow-hidden min-h-[160px]">
       
       {/* Symbol & Price Section */}
-      <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-2`}>
-        <div className="space-y-0.5">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">{symbol} ANALYSIS</p>
-          <p className="text-4xl font-black text-slate-300 tracking-tighter">${price}</p>
+      <div className="col-span-4 p-8 flex flex-col justify-center bg-slate-950/40">
+        <div className="space-y-1">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] font-mono">{symbol} ANALYSIS</p>
+          <p className="text-5xl font-black text-white tracking-tighter">${price}</p>
         </div>
-        <div className="inline-flex items-center gap-2 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-600/40">
-          <Activity className="w-3 h-3 text-slate-400" />
-          <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest">{trend}</span>
+        <div className="mt-3 inline-flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.2em] font-mono">{trend}</span>
         </div>
       </div>
 
-      {/* Trade Setup Section - NEW */}
-      {isSetup && (
-        <div className="col-span-4 border-l border-white/5 pl-6 pr-2 space-y-2">
-           <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                 <div className={`w-2 h-2 rounded-full bg-${colorClass} ${glowClass}`} />
-                 <p className={`text-[10px] font-black text-${colorClass} uppercase tracking-[0.1em] font-mono`}>
-                    POSSÍVEL {isLong ? 'FUNDO (LONG)' : 'TOPO (SHORT)'}
-                 </p>
-              </div>
-              <span className={`text-[10px] font-black bg-${colorClass}/20 text-${colorClass} px-2 py-0.5 rounded-md border border-${colorClass}/30`}>
-                 {setup.score}/10
-              </span>
-           </div>
-           
-           <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
-              <div className="flex justify-between border-b border-white/5 pb-1">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Entrada</span>
-                 <span className="text-sm font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 pb-1">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Target 1</span>
-                 <span className="text-sm font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between pt-1">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Stop Loss</span>
-                 <span className="text-sm font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between pt-1">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">R/R Ratio</span>
-                 <span className="text-sm font-black text-sky-400 font-mono">{setup.rr.toFixed(1)}x</span>
-              </div>
-           </div>
-        </div>
-      )}
+      {/* Trade Setup Section */}
+      <div className="col-span-5 p-8 border-x border-white/5 bg-slate-950/20 flex flex-col justify-center">
+        {isSetup ? (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+               <div className={`w-3 h-3 rounded-full bg-${colorClass} animate-ping shadow-[0_0_15px_rgba(255,255,255,0.3)]`} />
+               <p className={`text-xs font-black text-${colorClass} uppercase tracking-[0.2em] font-mono`}>
+                  POSSÍVEL {isLong ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {setup.score}/10
+               </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+               <div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Entrada</span>
+                  <span className="text-xl font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+               </div>
+               <div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Target</span>
+                  <span className="text-xl font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+               </div>
+               <div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Stop</span>
+                  <span className="text-xl font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+               </div>
+               <div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">R/R</span>
+                  <span className="text-xl font-black text-sky-400 font-mono">{setup.rr.toFixed(1)}x</span>
+               </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] italic">Aguardando Setup de Elite...</p>
+          </div>
+        )}
+      </div>
 
       {/* Technical Indicators */}
-      <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-4 border-l border-white/5 ${isSetup ? 'pl-6' : 'pl-8'} pr-2`}>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">RSI (14)</span>
-          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-400`}>{rsi}</span>
+      <div className="col-span-3 p-8 flex flex-col justify-center gap-6 bg-slate-950/40">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black text-slate-500 uppercase tracking-widest font-mono">RSI</span>
+          <span className="text-4xl font-black text-slate-200 font-mono">{rsi}</span>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">WT</span>
-          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-400`}>{wt}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black text-slate-500 uppercase tracking-widest font-mono">WT</span>
+          <span className="text-4xl font-black text-slate-200 font-mono">{wt}</span>
         </div>
       </div>
 
-      {/* AI Verdict Section */}
-      <div className={`${isSetup ? 'col-span-4' : 'col-span-6'} flex flex-col items-start gap-3 border-l border-white/5 pl-8`}>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-sentinela-blue glow-blue" />
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">SENTINELAAI VERDICT</p>
-        </div>
-        <p className={`${isSetup ? 'text-[10px]' : 'text-xs'} font-semibold text-slate-300 leading-tight tracking-tight overflow-y-auto max-h-[72px]`}>
-          &quot;{verdict}&quot;
-        </p>
-      </div>
+    </div>
 
     </div>
   );
