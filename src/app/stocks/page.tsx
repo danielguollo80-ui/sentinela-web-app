@@ -28,8 +28,8 @@ export default function StocksPage() {
             <h1 className="text-8xl md:text-8xl font-black tracking-tighter text-white">
               SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 40px rgba(52,211,153,0.6)" }}>STOCKS</span>
             </h1>
-            <p className="text-lg md:text-lg font-black tracking-[0.2em] uppercase">
-              Mercado Americano · NYSE/NASDAQ · IA Gemini 2.0
+            <p className="text-lg md:text-lg font-black tracking-[0.2em] uppercase text-slate-400">
+              Mercado Americano · NYSE/NASDAQ · IA Claude 3.5
             </p>
           </div>
 

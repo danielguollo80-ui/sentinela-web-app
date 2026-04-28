@@ -27,7 +27,7 @@ export default function CryptoPage() {
               SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.5)" }}>PRO</span>
             </h1>
             <p className="text-slate-300 text-sm font-black tracking-[0.2em] uppercase">
-              Análise técnica · Swing Trade · IA Claude
+              Análise técnica · Swing Trade · IA Claude 3.5
             </p>
           </div>
 
