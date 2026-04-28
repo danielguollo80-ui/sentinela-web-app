@@ -40,7 +40,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       {/* Symbol & Price Section */}
       <div className="col-span-4 p-6 flex flex-col justify-center bg-slate-950/40">
         <div className="space-y-0.5">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] font-mono">{symbol} ANALYSIS</p>
+          <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] font-mono">{symbol} ANALYSIS</p>
           <p className="text-4xl font-black text-white tracking-tighter">${price}</p>
         </div>
         <div className="mt-2 inline-flex items-center gap-2">
@@ -62,26 +62,26 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
             
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                <div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Entrada</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">Entrada</span>
                   <span className="text-lg font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                </div>
                <div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Target</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">Target</span>
                   <span className="text-lg font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                </div>
                <div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Stop</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">Stop</span>
                   <span className="text-lg font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                </div>
                <div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">R/R</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">R/R</span>
                   <span className="text-lg font-black text-sky-400 font-mono">{setup.rr.toFixed(1)}x</span>
                </div>
             </div>
           </>
         ) : (
           <div className="text-center py-4">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic">Aguardando Setup de Elite...</p>
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] italic">Aguardando Setup de Elite...</p>
           </div>
         )}
       </div>
@@ -89,11 +89,11 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       {/* Technical Indicators */}
       <div className="col-span-3 p-6 flex flex-col justify-center gap-4 bg-slate-950/40">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">RSI</span>
+          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">RSI</span>
           <span className="text-3xl font-black text-slate-200 font-mono">{rsi}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">WT</span>
+          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">WT</span>
           <span className="text-3xl font-black text-slate-200 font-mono">{wt}</span>
         </div>
       </div>

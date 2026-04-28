@@ -338,7 +338,7 @@ export function CryptoAnalyzer() {
               {/* SECTION 1: ASSET & PRICE */}
               <div className="lg:col-span-4 p-4 flex flex-col justify-center bg-slate-950/40">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">{result.symbol} ANALYSIS</div>
+                  <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-300">{result.symbol} ANALYSIS</div>
                   <span className="text-[7px] px-1 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
                 </div>
                 <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(result.price, 2)}</div>
@@ -358,19 +358,19 @@ export function CryptoAnalyzer() {
                       </span>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Entrada</div>
+                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Entrada</div>
                       <div className="text-lg md:text-xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Target</div>
+                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Target</div>
                       <div className="text-lg md:text-xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Stop</div>
+                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Stop</div>
                       <div className="text-lg md:text-xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">R/R</div>
+                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">R/R</div>
                       <div className="text-lg md:text-xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
                     </div>
                   </>
@@ -384,13 +384,13 @@ export function CryptoAnalyzer() {
               {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
               <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">RSI</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">RSI</span>
                   <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
                     {fmtNum(result.indicators_1d.rsi)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">WT</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">WT</span>
                   <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${
                     (result.indicators_4h.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
