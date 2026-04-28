@@ -337,7 +337,10 @@ export function CryptoAnalyzer() {
               
               {/* SECTION 1: ASSET & PRICE */}
               <div className="lg:col-span-4 p-4 flex flex-col justify-center bg-slate-950/40">
-                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mb-0.5">{result.symbol} ANALYSIS</div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">{result.symbol} ANALYSIS</div>
+                  <span className="text-[7px] px-1 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
+                </div>
                 <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(result.price, 2)}</div>
                 <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
                   FNG {result.fng} • {result.fng_label}
