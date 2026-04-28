@@ -322,7 +322,7 @@ export const BannerGenerator = () => {
               </div>
            </div>
 
-           <div className="flex flex-col items-center gap-3 w-full">
+           <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
               <ShadButton 
                  onClick={() => handleSync()} 
                  disabled={isSyncing}
@@ -332,23 +332,25 @@ export const BannerGenerator = () => {
                  {isSyncing ? 'SINCRONIZANDO...' : 'ATUALIZAR DADOS'}
               </ShadButton>
 
-              <ShadButton
-                 onClick={() => onExport('png')}
-                 disabled={isExporting || isExportingJpg}
-                 className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-60"
-              >
-                 <Download className={`w-5 h-5 ${isExporting ? 'animate-bounce' : ''}`} />
-                 {isExporting ? 'GERANDO...' : 'BAIXAR PNG — TWITTER (X)'}
-              </ShadButton>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <ShadButton
+                   onClick={() => onExport('png')}
+                   disabled={isExporting || isExportingJpg}
+                   className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-60"
+                >
+                   <Download className={`w-5 h-5 ${isExporting ? 'animate-bounce' : ''}`} />
+                   {isExporting ? 'GERANDO...' : 'PNG — TWITTER (X)'}
+                </ShadButton>
 
-              <ShadButton
-                 onClick={() => onExport('jpg')}
-                 disabled={isExporting || isExportingJpg}
-                 className="w-full h-12 px-8 bg-sky-500 hover:bg-sky-400 text-white font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(14,165,233,0.3)] disabled:opacity-60"
-              >
-                 <Download className={`w-5 h-5 ${isExportingJpg ? 'animate-bounce' : ''}`} />
-                 {isExportingJpg ? 'GERANDO...' : 'BAIXAR JPG — TELEGRAM'}
-              </ShadButton>
+                <ShadButton
+                   onClick={() => onExport('jpg')}
+                   disabled={isExporting || isExportingJpg}
+                   className="w-full h-12 px-8 bg-sky-500 hover:bg-sky-400 text-white font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(14,165,233,0.3)] disabled:opacity-60"
+                >
+                   <Download className={`w-5 h-5 ${isExportingJpg ? 'animate-bounce' : ''}`} />
+                   {isExportingJpg ? 'GERANDO...' : 'JPG — TELEGRAM'}
+                </ShadButton>
+              </div>
 
               {/* Modal para iOS: segurar a imagem para salvar */}
               {previewUrl && (
