@@ -41,7 +41,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-2`}>
         <div className="space-y-0.5">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">{symbol} ANALYSIS</p>
-          <p className="text-4xl font-black text-sentinela-blue tracking-tighter">${price}</p>
+          <p className="text-3xl font-black text-sky-300 tracking-tighter">${price}</p>
         </div>
         <div className="inline-flex items-center gap-2 bg-sentinela-blue/10 px-3 py-1 rounded-full border border-sentinela-blue/30">
           <Activity className="w-3 h-3 text-sentinela-blue" />

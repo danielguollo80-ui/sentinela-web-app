@@ -339,7 +339,7 @@ export const BannerGenerator = () => {
                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter italic">Elite Market Analysis Engine</p>
                                 </div>
                              </div>
-                             <div className="flex-1 mt-6 mb-2 glass rounded-3xl overflow-hidden border border-white/5 relative z-10">
+                             <div className="flex-1 mt-6 mb-2 glass rounded-3xl overflow-hidden border border-white/5 relative z-10 min-h-[460px]">
                                 {historyData.length > 0 && (
                                    <SentinelaChart 
                                       data={historyData} 

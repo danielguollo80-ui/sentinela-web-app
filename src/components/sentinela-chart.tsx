@@ -37,7 +37,7 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
         horzLines: { color: 'rgba(51, 65, 85, 0.2)', style: LineStyle.Solid },
       },
       width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight || 400,
+      height: 460,
       timeScale: {
         borderColor: 'rgba(51, 65, 85, 0.5)',
         timeVisible: true,
@@ -121,11 +121,13 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
 
     const handleResize = () => {
       if (!chartContainerRef.current) return;
-      chart.applyOptions({
-        width: chartContainerRef.current.clientWidth,
-        height: chartContainerRef.current.clientHeight || 400,
-      });
+      const w = chartContainerRef.current.clientWidth;
+      const h = chartContainerRef.current.clientHeight || 460;
+      chart.resize(w, h);
     };
+
+    // Resize after layout is painted
+    requestAnimationFrame(handleResize);
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(chartContainerRef.current);
