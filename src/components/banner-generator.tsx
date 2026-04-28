@@ -58,16 +58,24 @@ export const BannerGenerator = () => {
 
   const onExport = async () => {
     if (exportRef.current === null) return;
+    // Replace canvas elements with <img> so html-to-image works on mobile
+    const canvases = Array.from(exportRef.current.querySelectorAll('canvas'));
+    const swapped: { canvas: HTMLCanvasElement; img: HTMLImageElement }[] = [];
+    canvases.forEach(canvas => {
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/png');
+      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
+      canvas.parentNode?.insertBefore(img, canvas);
+      canvas.style.display = 'none';
+      swapped.push({ canvas, img });
+    });
     try {
-      const dataUrl = await toPng(exportRef.current, { 
-        cacheBust: true, 
+      const dataUrl = await toPng(exportRef.current, {
+        cacheBust: true,
         pixelRatio: 3,
         width: 1200,
         height: 675,
-        style: {
-          transform: 'scale(1)',
-          borderRadius: '0'
-        }
+        style: { transform: 'scale(1)', borderRadius: '0' }
       });
       const link = document.createElement('a');
       link.download = `sentinela-${activeBot}-${Date.now()}.png`;
@@ -75,6 +83,11 @@ export const BannerGenerator = () => {
       link.click();
     } catch (err) {
       console.error('Export error:', err);
+    } finally {
+      swapped.forEach(({ canvas, img }) => {
+        canvas.style.display = '';
+        img.remove();
+      });
     }
   };
 
