@@ -164,6 +164,7 @@ export const BannerGenerator = () => {
       }
 
       const fileName = `sentinela-${activeBot}-${Date.now()}.${ext}`;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
       if (isIOS && navigator.share) {
@@ -182,8 +183,14 @@ export const BannerGenerator = () => {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-        } catch { /* ignore */ }
-        setPreviewUrl(dataUrl);
+        } catch { 
+          if (isMobile) setPreviewUrl(dataUrl);
+        }
+        
+        // Apenas abre o preview no Mobile se o download direto não for o ideal
+        if (isMobile) {
+          setPreviewUrl(dataUrl);
+        }
       }
     } catch (err) {
       console.error('Export error:', err);
