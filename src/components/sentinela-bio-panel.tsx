@@ -35,17 +35,17 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
   const glowClass = isLong ? 'glow-emerald' : 'glow-rose';
 
   return (
-    <div className="relative z-10 grid grid-cols-12 gap-6 items-center glass backdrop-blur-xl border-t border-white/10 p-6 mt-auto rounded-b-[2.5rem]">
+    <div className="relative z-10 grid grid-cols-12 gap-4 items-center glass backdrop-blur-xl border-t border-white/10 p-4 mt-auto rounded-b-[2.5rem]">
       
       {/* Symbol & Price Section */}
       <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-2`}>
         <div className="space-y-0.5">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">{symbol} ANALYSIS</p>
-          <p className="text-4xl font-black text-sentinela-blue tracking-tighter text-glow">${price}</p>
+          <p className="text-4xl font-black text-sentinela-blue tracking-tighter">${price}</p>
         </div>
         <div className="inline-flex items-center gap-2 bg-sentinela-blue/10 px-3 py-1 rounded-full border border-sentinela-blue/30 glow-blue">
           <Activity className="w-3 h-3 text-sentinela-blue" />
-          <span className="text-[10px] font-black text-sentinela-blue uppercase tracking-widest text-glow">{trend}</span>
+          <span className="text-[10px] font-black text-sentinela-blue uppercase tracking-widest">{trend}</span>
         </div>
       </div>
 
@@ -89,11 +89,11 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-4 border-l border-white/5 ${isSetup ? 'pl-6' : 'pl-8'} pr-2`}>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">RSI (14)</span>
-          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic text-glow`}>{rsi}</span>
+          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic`}>{rsi}</span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">WT</span>
-          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic text-glow`}>{wt}</span>
+          <span className={`${isSetup ? 'text-2xl' : 'text-3xl'} font-black text-white italic`}>{wt}</span>
         </div>
       </div>
 

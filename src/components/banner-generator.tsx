@@ -350,7 +350,7 @@ export const BannerGenerator = () => {
                                    />
                                 )}
                              </div>
-                             <div className="mt-4 relative z-20">
+                             <div className="mt-2 relative z-20">
                                 <SentinelaBioPanel {...cryptoData} />
                              </div>
                           </>
