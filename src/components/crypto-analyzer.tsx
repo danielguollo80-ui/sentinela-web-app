@@ -331,45 +331,68 @@ export function CryptoAnalyzer() {
       {loading && <LoadingSkeleton />}
       {result && !loading && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-6 glass-dark rounded-2xl border border-white/10 bg-slate-900/40">
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Asset</div>
-              <div className="text-4xl font-black text-white">{result.symbol}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl md:text-4xl font-mono font-black text-blue-400 tracking-tighter">${fmtPrice(result.price, 2)}</div>
-              <div className={`text-[10px] md:text-sm font-bold mt-1 ${fngColor(result.fng)}`}>FNG {result.fng} • {result.fng_label.toUpperCase()}</div>
-            </div>
-          </div>
-
-          {/* Confluence Alert / Trade Setup */}
-          {result.setup && result.setup.tipo !== 'NEUTRO' && (
-            <div className={`p-6 rounded-3xl border shadow-2xl animate-in fade-in zoom-in duration-700 ${
-              result.setup.tipo === 'LONG' 
-                ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/5' 
-                : 'bg-rose-500/10 border-rose-500/30 shadow-rose-500/5'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-3 h-3 rounded-full animate-ping ${
-                    result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'
-                  }`} />
-                  <div>
-                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Confluence Signal</div>
-                    <div className={`text-2xl font-black tracking-tighter ${
-                      result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      {result.setup.tipo === 'LONG' ? '🚀 POSSÍVEL FUNDO (BUY)' : '⚠️ POSSÍVEL TOPO (SELL)'}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Score</div>
-                  <div className="text-2xl font-black text-white">{result.setup.score}/10</div>
+          {/* Elite Horizontal Analysis Bar */}
+          <div className="glass-dark rounded-3xl border border-white/10 overflow-hidden shadow-2xl bg-slate-900/40">
+            <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+              
+              {/* SECTION 1: ASSET & PRICE */}
+              <div className="lg:col-span-3 p-6 flex flex-col justify-center bg-slate-950/40">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">{result.symbol} ANALYSIS</div>
+                <div className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-2">${fmtPrice(result.price, 2)}</div>
+                <div className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
+                  FNG {result.fng} • {result.fng_label}
                 </div>
               </div>
+
+              {/* SECTION 2: TRADE SETUP (If exists) */}
+              <div className="lg:col-span-5 p-6 grid grid-cols-2 gap-y-6 gap-x-8 items-center">
+                {result.setup && result.setup.tipo !== 'NEUTRO' ? (
+                  <>
+                    <div className="col-span-2 flex items-center gap-2 mb-1">
+                      <div className={`w-2 h-2 rounded-full animate-pulse ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        POSSÍVEL {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Entrada</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Target</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Stop Loss</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">R/R Ratio</div>
+                      <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-2 text-center text-slate-500 text-xs font-bold uppercase tracking-widest italic py-8">
+                    Aguardando setup de alta probabilidade...
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 3: VERDICT */}
+              <div className="lg:col-span-4 p-6 bg-slate-950/20">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">SentinelaAI Verdict</div>
+                </div>
+                <div className="max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+                  <p className="text-sm md:text-base font-medium leading-relaxed text-slate-200">
+                    {result.ai_analysis}
+                  </p>
+                </div>
+              </div>
+
             </div>
-          )}
+          </div>
 
           <Tabs defaultValue="1d">
             <TabsList className="bg-slate-950 p-1 h-14 w-full rounded-xl">
