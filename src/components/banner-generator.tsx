@@ -66,17 +66,28 @@ export const BannerGenerator = () => {
     // 1. Captura o gráfico via API nativa do lightweight-charts (funciona em iOS)
     const chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
 
-    // 2. Substitui o <canvas> do gráfico por <img> no DOM para que toPng consiga capturar
+    // 2. Substitui os <canvas> do gráfico por <img> no DOM para que toPng consiga capturar
     const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
-    const canvasEl = chartContainer?.querySelector('canvas') as HTMLCanvasElement | null;
     let replacementImg: HTMLImageElement | null = null;
+    const hiddenCanvases: HTMLCanvasElement[] = [];
 
-    if (chartImgUrl && canvasEl) {
+    if (chartImgUrl && chartContainer) {
       replacementImg = document.createElement('img');
       replacementImg.src = chartImgUrl;
-      replacementImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;display:block';
-      canvasEl.parentElement?.appendChild(replacementImg);
-      canvasEl.style.display = 'none';
+      replacementImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;display:block;z-index:50';
+      chartContainer.style.position = 'relative';
+      chartContainer.appendChild(replacementImg);
+
+      // Esconde todos os canvases dentro do container
+      chartContainer.querySelectorAll('canvas').forEach(c => {
+        c.style.visibility = 'hidden';
+        hiddenCanvases.push(c as HTMLCanvasElement);
+      });
+
+      // Aguarda a imagem carregar antes de capturar
+      if (!replacementImg.complete) {
+        await new Promise<void>(resolve => { replacementImg!.onload = () => resolve(); });
+      }
     }
 
     try {
@@ -121,7 +132,7 @@ export const BannerGenerator = () => {
       }
     } finally {
       if (replacementImg) replacementImg.remove();
-      if (canvasEl) canvasEl.style.display = '';
+      hiddenCanvases.forEach(c => { c.style.visibility = ''; });
       setIsExporting(false);
     }
   };
