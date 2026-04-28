@@ -342,6 +342,35 @@ export function CryptoAnalyzer() {
             </div>
           </div>
 
+          {/* Confluence Alert / Trade Setup */}
+          {result.setup && result.setup.tipo !== 'NEUTRO' && (
+            <div className={`p-6 rounded-3xl border shadow-2xl animate-in fade-in zoom-in duration-700 ${
+              result.setup.tipo === 'LONG' 
+                ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/5' 
+                : 'bg-rose-500/10 border-rose-500/30 shadow-rose-500/5'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-3 h-3 rounded-full animate-ping ${
+                    result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'
+                  }`} />
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Confluence Signal</div>
+                    <div className={`text-2xl font-black tracking-tighter ${
+                      result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>
+                      {result.setup.tipo === 'LONG' ? '🚀 POSSÍVEL FUNDO (BUY)' : '⚠️ POSSÍVEL TOPO (SELL)'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Score</div>
+                  <div className="text-2xl font-black text-white">{result.setup.score}/10</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Tabs defaultValue="1d">
             <TabsList className="bg-slate-950 p-1 h-14 w-full rounded-xl">
               <TabsTrigger value="1d" className="flex-1 text-sm font-bold">DIÁRIO (1D)</TabsTrigger>
