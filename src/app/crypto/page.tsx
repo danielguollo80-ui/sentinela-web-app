@@ -14,7 +14,7 @@ export default function CryptoPage() {
       <div className="relative pt-10 pb-24">
         {/* Header */}
         <div className="container mx-auto px-6 mb-8 flex flex-col items-center text-center gap-4 max-w-4xl">
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.3)] border border-emerald-500/20">
+          <div className="relative w-32 h-32 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.3)] border border-emerald-500/20">
             <img 
               src="/logo-premium.png" 
               alt="Sentinela Logo" 
@@ -22,18 +22,18 @@ export default function CryptoPage() {
             />
           </div>
           
-          <div className="space-y-1">
-            <h1 className="text-3xl font-black tracking-tighter text-white">
-              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.4)" }}>PRO</span>
+          <div className="space-y-2">
+            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-white">
+              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.5)" }}>PRO</span>
             </h1>
-            <p className="text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">
+            <p className="text-slate-300 text-sm font-black tracking-[0.2em] uppercase">
               Análise técnica · Swing Trade · IA Claude
             </p>
           </div>
 
           <Link
             href="/"
-            className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors font-mono uppercase tracking-widest"
+            className="text-xs text-slate-100 hover:text-emerald-400 transition-colors font-black uppercase tracking-widest pt-2"
           >
             ← voltar ao início
           </Link>
