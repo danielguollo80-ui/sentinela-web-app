@@ -132,11 +132,11 @@ function TradeSetupBlock({ setup }: { setup: NonNullable<AnalysisResult['setup']
   );
 }
 
-function fmtPrice(v?: number | null, decimals = 2) {
-  if (v == null) return "—";
-  if (v >= 1000) return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: 8 });
-}
+const fmtPrice = (val: number | undefined | null, decimals = 2) => {
+  if (val == null) return "—";
+  if (val >= 1000) return val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return val.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: 4 });
+};
 
 function fmtNum(v?: number | null, d = 1) {
   if (v == null) return "—";
@@ -337,8 +337,8 @@ export function CryptoAnalyzer() {
               <div className="text-4xl font-black text-white">{result.symbol}</div>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-mono font-black text-blue-400">${fmtPrice(result.price, 4)}</div>
-              <div className={`text-sm font-bold mt-2 ${fngColor(result.fng)}`}>FNG {result.fng} • {result.fng_label.toUpperCase()}</div>
+              <div className="text-2xl md:text-4xl font-mono font-black text-blue-400 tracking-tighter">${fmtPrice(result.price, 2)}</div>
+              <div className={`text-[10px] md:text-sm font-bold mt-1 ${fngColor(result.fng)}`}>FNG {result.fng} • {result.fng_label.toUpperCase()}</div>
             </div>
           </div>
 
