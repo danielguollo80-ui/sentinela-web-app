@@ -316,7 +316,7 @@ export const BannerGenerator = () => {
                  >
                     <div 
                       ref={exportRef}
-                      className={`relative w-[1200px] h-[675px] flex flex-col transition-all duration-500 antialiased ${activeBot === 'crypto' ? 'bg-slate-950 p-6 lg:p-12' : 'bg-slate-950'}`}
+                      className={`relative w-[1200px] h-[675px] flex flex-col transition-all duration-500 antialiased ${activeBot === 'crypto' ? 'bg-slate-950 p-6' : 'bg-slate-950'}`}
                       style={{ 
                         WebkitFontSmoothing: 'antialiased',
                         MozOsxFontSmoothing: 'grayscale'
