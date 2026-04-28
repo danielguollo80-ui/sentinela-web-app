@@ -336,59 +336,59 @@ export function CryptoAnalyzer() {
             <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch divide-y lg:divide-y-0 lg:divide-x divide-white/10">
               
               {/* SECTION 1: ASSET & PRICE */}
-              <div className="lg:col-span-4 p-6 flex flex-col justify-center bg-slate-950/40">
-                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{result.symbol} ANALYSIS</div>
-                <div className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-1">${fmtPrice(result.price, 2)}</div>
-                <div className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
+              <div className="lg:col-span-4 p-4 flex flex-col justify-center bg-slate-950/40">
+                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mb-0.5">{result.symbol} ANALYSIS</div>
+                <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(result.price, 2)}</div>
+                <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
                   FNG {result.fng} • {result.fng_label}
                 </div>
               </div>
 
               {/* SECTION 2: TRADE SETUP (If exists) */}
-              <div className="lg:col-span-5 p-6 grid grid-cols-2 gap-y-3 gap-x-8 items-center border-r border-white/10 bg-slate-950/20">
+              <div className="lg:col-span-5 p-4 grid grid-cols-2 gap-y-2 gap-x-6 items-center border-r border-white/10 bg-slate-950/20">
                 {result.setup && result.setup.tipo !== 'NEUTRO' ? (
                   <>
-                    <div className="col-span-2 flex items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full animate-ping ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div className="col-span-2 flex items-center gap-2 mb-0.5">
+                      <div className={`w-1.5 h-1.5 rounded-full animate-ping ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
                       </span>
                     </div>
                     <div>
-                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Entrada</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Entrada</div>
+                      <div className="text-lg md:text-xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
                     </div>
                     <div>
-                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Target</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
+                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Target</div>
+                      <div className="text-lg md:text-xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
                     </div>
                     <div>
-                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Stop</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
+                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Stop</div>
+                      <div className="text-lg md:text-xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
                     </div>
                     <div>
-                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">R/R</div>
-                      <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
+                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">R/R</div>
+                      <div className="text-lg md:text-xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
                     </div>
                   </>
                 ) : (
-                  <div className="col-span-2 text-center text-slate-500 text-xs font-bold uppercase tracking-widest italic py-8">
-                    Aguardando setup de alta probabilidade...
+                  <div className="col-span-2 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest italic py-4">
+                    Aguardando setup de elite...
                   </div>
                 )}
               </div>
 
               {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
-              <div className="lg:col-span-3 p-6 flex flex-col justify-center gap-4 bg-slate-950/40">
-                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">RSI (14)</span>
-                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
+              <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">RSI</span>
+                  <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
                     {fmtNum(result.indicators_1d.rsi)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">WT</span>
-                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">WT</span>
+                  <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${
                     (result.indicators_4h.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
                     {fmtNum(result.indicators_4h.wt1)}
