@@ -409,10 +409,10 @@ export function CryptoAnalyzer() {
                 {result.supports.slice(0, 3).map((s: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="w-1 h-8 bg-emerald-500/30 rounded-full" />
-                      <span className="text-[10px] font-black text-emerald-400 uppercase">Support {i + 1}</span>
+                      <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
+                      <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-widest">Support {i + 1}</span>
                     </div>
-                    <span className="text-sm font-mono font-black text-white">${fmtPrice(s)}</span>
+                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(s)}</span>
                   </div>
                 ))}
               </div>
@@ -427,10 +427,10 @@ export function CryptoAnalyzer() {
                 {result.resistances.slice(0, 3).map((r: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="w-1 h-8 bg-rose-500/30 rounded-full" />
-                      <span className="text-[10px] font-black text-rose-400 uppercase">Resistance {i + 1}</span>
+                      <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
+                      <span className="text-xs md:text-sm font-black text-rose-400 uppercase tracking-widest">Resistance {i + 1}</span>
                     </div>
-                    <span className="text-sm font-mono font-black text-white">${fmtPrice(r)}</span>
+                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(r)}</span>
                   </div>
                 ))}
               </div>
