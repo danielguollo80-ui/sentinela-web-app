@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw, Bitcoin, Trophy, ChevronDown } from 'lucide-react';
+import { CandlestickData } from 'lightweight-charts';
 
 const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'TAO/USDT', 'SUI/USDT', 'XRP/USDT'];
 
@@ -20,7 +21,7 @@ export const BannerGenerator = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [availableMatches, setAvailableMatches] = useState<string[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string>("");
-  const [historyData, setHistoryData] = useState<unknown[]>([]);
+  const [historyData, setHistoryData] = useState<CandlestickData[]>([]);
   const exportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -37,7 +38,7 @@ export const BannerGenerator = () => {
     s_4h: "73,200",
     r_4h: "78,500",
     verdict: "CONSOLIDATION NEUTRAL - No reversal triggers detected at current levels. WaveTrend indicates stability.",
-    setup: null as unknown
+    setup: undefined as { tipo: string; score: number; entrada: number; stop: number; alvo1: number; alvo2: number; rr: number; fatores: string[]; } | undefined
   });
 
   const [footballData, setFootballData] = useState({
