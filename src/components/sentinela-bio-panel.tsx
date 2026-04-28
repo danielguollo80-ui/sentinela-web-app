@@ -97,9 +97,6 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
           <span className="text-4xl font-black text-slate-200 font-mono">{wt}</span>
         </div>
       </div>
-
-    </div>
-
     </div>
   );
 };
