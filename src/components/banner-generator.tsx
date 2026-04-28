@@ -63,42 +63,61 @@ export const BannerGenerator = () => {
     if (!exportRef.current) return;
     setIsExporting(true);
 
-    // 1. Captura o gráfico via API nativa do lightweight-charts (funciona em iOS)
-    const chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
+    const SCALE = 2;
+    const W = 1200, H = 675;
 
-    // 2. Substitui os <canvas> do gráfico por <img> no DOM para que toPng consiga capturar
+    // Helper para carregar imagem a partir de uma URL/dataURL
+    const loadImg = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+
     const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
-    let replacementImg: HTMLImageElement | null = null;
-    const hiddenCanvases: HTMLCanvasElement[] = [];
-
-    if (chartImgUrl && chartContainer) {
-      replacementImg = document.createElement('img');
-      replacementImg.src = chartImgUrl;
-      replacementImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;display:block;z-index:50';
-      chartContainer.style.position = 'relative';
-      chartContainer.appendChild(replacementImg);
-
-      // Esconde todos os canvases dentro do container
-      chartContainer.querySelectorAll('canvas').forEach(c => {
-        c.style.visibility = 'hidden';
-        hiddenCanvases.push(c as HTMLCanvasElement);
-      });
-
-      // Aguarda a imagem carregar antes de capturar
-      if (!replacementImg.complete) {
-        await new Promise<void>(resolve => { replacementImg!.onload = () => resolve(); });
-      }
-    }
 
     try {
-      // 3. Captura o banner inteiro com html-to-image (sem canvas, funciona em Safari/iOS)
-      const dataUrl = await toPng(exportRef.current, {
+      // 1. Captura o gráfico via API nativa do lightweight-charts ANTES de qualquer DOM change
+      const chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
+
+      // 2. Esconde o chart container e captura o resto do banner com toPng (sem canvas = funciona iOS)
+      if (chartContainer) chartContainer.style.visibility = 'hidden';
+
+      const bannerDataUrl = await toPng(exportRef.current, {
         cacheBust: true,
-        pixelRatio: 2,
-        width: 1200,
-        height: 675,
+        pixelRatio: SCALE,
+        width: W,
+        height: H,
       });
 
+      if (chartContainer) chartContainer.style.visibility = '';
+
+      // 3. Compõe banner + gráfico num <canvas> final
+      const canvas = document.createElement('canvas');
+      canvas.width = W * SCALE;
+      canvas.height = H * SCALE;
+      const ctx = canvas.getContext('2d')!;
+
+      // Desenha o banner (fundo + header + bio panel, sem gráfico)
+      const bannerImg = await loadImg(bannerDataUrl);
+      ctx.drawImage(bannerImg, 0, 0, canvas.width, canvas.height);
+
+      // Sobrepõe o gráfico na posição correta
+      if (chartImgUrl && chartContainer) {
+        const bannerRect = exportRef.current.getBoundingClientRect();
+        const chartRect = chartContainer.getBoundingClientRect();
+        const sx = W / bannerRect.width;
+        const sy = H / bannerRect.height;
+        const cx = (chartRect.left - bannerRect.left) * sx * SCALE;
+        const cy = (chartRect.top  - bannerRect.top)  * sy * SCALE;
+        const cw = chartRect.width  * sx * SCALE;
+        const ch = chartRect.height * sy * SCALE;
+        const chartImg = await loadImg(chartImgUrl);
+        ctx.drawImage(chartImg, cx, cy, cw, ch);
+      }
+
+      // 4. Export
+      const dataUrl = canvas.toDataURL('image/png');
       const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -108,7 +127,6 @@ export const BannerGenerator = () => {
           const file = new File([blob], fileName, { type: 'image/png' });
           await navigator.share({ files: [file], title: 'Sentinela Analysis' });
         } catch {
-          // Fallback: mostra imagem para salvar manualmente
           setPreviewUrl(dataUrl);
         }
       } else {
@@ -124,15 +142,9 @@ export const BannerGenerator = () => {
       }
     } catch (err) {
       console.error('Export error:', err);
-      // Fallback de último recurso: mostra só o gráfico (sem o restante do banner)
-      if (chartImgUrl) {
-        setPreviewUrl(chartImgUrl);
-      } else {
-        alert('Erro ao gerar imagem.');
-      }
+      if (chartContainer) chartContainer.style.visibility = '';
+      alert('Erro ao gerar imagem.');
     } finally {
-      if (replacementImg) replacementImg.remove();
-      hiddenCanvases.forEach(c => { c.style.visibility = ''; });
       setIsExporting(false);
     }
   };
