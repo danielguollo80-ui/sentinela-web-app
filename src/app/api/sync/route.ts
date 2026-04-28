@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     const tokenParams = searchParams.get('token');
     const botType = searchParams.get('bot') || 'crypto';
 
-    const AUTH_TOKEN = (process.env.SYNC_AUTH_TOKEN || 'sentinela_2026_secure').trim();
+    const AUTH_TOKEN = (process.env.SYNC_AUTH_TOKEN || '').trim();
 
-    if (tokenParams !== AUTH_TOKEN) {
+    if (!AUTH_TOKEN || tokenParams !== AUTH_TOKEN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -246,7 +246,7 @@ export async function GET(request: Request) {
             Seja direto e use o estilo "Sentinela Crypto".`;
 
             const msg = await anthropic.messages.create({
-              model: "claude-3-5-sonnet-20241022",
+              model: "claude-haiku-4-5-20251001",
               max_tokens: 1000,
               messages: [{ role: "user", content: prompt }]
             });
