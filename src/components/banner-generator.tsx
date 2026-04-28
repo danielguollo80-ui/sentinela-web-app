@@ -268,11 +268,8 @@ export const BannerGenerator = () => {
     const updateScale = () => {
       if (containerRef.current) {
         const aw = containerRef.current.offsetWidth;
-        const mobile = aw < 768;
-        setIsMobileView(mobile);
-        // Mobile: divide por 700 → escala ~0.56 em 390px → gráfico ~258px de altura
-        // Desktop: divide por 1200 → cabe na tela sem scroll
-        const newScale = isZoomed ? 1 : Math.min(1, aw / (mobile ? 700 : 1200));
+        setIsMobileView(aw < 768);
+        const newScale = isZoomed ? 1 : Math.min(1, aw / 1200);
         setScale(newScale);
       }
     };
@@ -442,13 +439,26 @@ export const BannerGenerator = () => {
                  </ShadButton>
               </div>
 
-              <div ref={containerRef} className={`w-full pb-12 flex flex-col ${(isZoomed || isMobileView) ? 'overflow-x-auto items-start' : 'overflow-hidden items-center justify-center'}`}>
+              {/* Mobile: gráfico interativo em largura total — visível só abaixo de lg */}
+              {activeBot === 'crypto' && historyData.length > 0 && (
+                <div className="block lg:hidden rounded-2xl overflow-hidden border border-white/5 bg-slate-950" style={{ height: '420px' }}>
+                  <SentinelaChart
+                    data={historyData}
+                    r_1h={cryptoData.r_1h !== "---" ? parseFloat(cryptoData.r_1h.replace(/,/g, '')) : undefined}
+                    s_1h={cryptoData.s_1h !== "---" ? parseFloat(cryptoData.s_1h.replace(/,/g, '')) : undefined}
+                    r_4h={cryptoData.r_4h !== "---" ? parseFloat(cryptoData.r_4h.replace(/,/g, '')) : undefined}
+                    s_4h={cryptoData.s_4h !== "---" ? parseFloat(cryptoData.s_4h.replace(/,/g, '')) : undefined}
+                  />
+                </div>
+              )}
+
+              <div ref={containerRef} className={`w-full pb-12 flex flex-col ${isZoomed ? 'overflow-x-auto items-start' : 'overflow-hidden items-center justify-center'}`}>
                  <div
                    style={{
                      width: '1200px',
                      height: '675px',
                      transform: `scale(${scale})`,
-                     transformOrigin: (isZoomed || isMobileView) ? 'top left' : 'top center',
+                     transformOrigin: isZoomed ? 'top left' : 'top center',
                      marginBottom: `-${675 * (1 - scale)}px`,
                      transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                    }}
