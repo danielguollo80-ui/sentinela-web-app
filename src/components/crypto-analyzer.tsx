@@ -345,30 +345,30 @@ export function CryptoAnalyzer() {
               </div>
 
               {/* SECTION 2: TRADE SETUP (If exists) */}
-              <div className="lg:col-span-5 p-6 grid grid-cols-2 gap-y-6 gap-x-8 items-center">
+              <div className="lg:col-span-4 p-6 grid grid-cols-2 gap-y-4 gap-x-6 items-center border-r border-white/10 bg-slate-950/20">
                 {result.setup && result.setup.tipo !== 'NEUTRO' ? (
                   <>
                     <div className="col-span-2 flex items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full animate-pulse ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                      <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        POSSÍVEL {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
+                      <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <span className={`text-xs font-black uppercase tracking-[0.3em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
                       </span>
                     </div>
                     <div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Entrada</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Entrada</div>
+                      <div className="text-xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Target</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
+                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Target</div>
+                      <div className="text-xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Stop Loss</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
+                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Stop</div>
+                      <div className="text-xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">R/R Ratio</div>
-                      <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
+                      <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">R/R</div>
+                      <div className="text-xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
                     </div>
                   </>
                 ) : (
@@ -378,10 +378,28 @@ export function CryptoAnalyzer() {
                 )}
               </div>
 
-              {/* SECTION 3: VERDICT */}
-              <div className="lg:col-span-4 p-6 bg-slate-950/20">
+              {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
+              <div className="lg:col-span-2 p-6 flex flex-col justify-center gap-4 bg-slate-950/40 border-r border-white/10">
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">RSI (14)</span>
+                  <span className={`text-3xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
+                    {fmtNum(result.indicators_1d.rsi)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">WT</span>
+                  <span className={`text-3xl font-black font-mono tracking-tighter ${
+                    (result.indicators_4h.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}>
+                    {fmtNum(result.indicators_4h.wt1)}
+                  </span>
+                </div>
+              </div>
+
+              {/* SECTION 4: VERDICT */}
+              <div className="lg:col-span-3 p-6 bg-slate-950/20">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
                   <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">SentinelaAI Verdict</div>
                 </div>
                 <div className="max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
