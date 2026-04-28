@@ -7,10 +7,10 @@ export default function Home() {
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(16,185,129,0.14),transparent)] pointer-events-none" />
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_80%_80%,rgba(14,165,233,0.06),transparent)] pointer-events-none" />
 
-      <div className="relative pt-6 sm:pt-10 pb-24">
+      <div className="relative pt-12 sm:pt-20 pb-24">
         {/* Header */}
-        <div className="container mx-auto px-6 mb-8 flex flex-col items-center text-center gap-4">
-          <div className="relative w-20 h-20 rounded-[2rem] overflow-hidden shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-500/20">
+        <div className="container mx-auto px-6 mb-12 flex flex-col items-center text-center gap-8">
+          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] overflow-hidden shadow-[0_0_60px_rgba(16,185,129,0.3)] border border-emerald-500/20 animate-in fade-in zoom-in duration-1000">
             <img 
               src="/logo-premium.png" 
               alt="Sentinela Logo" 
@@ -18,27 +18,27 @@ export default function Home() {
             />
           </div>
           
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tighter text-white"
-                style={{ textShadow: '0 0 40px rgba(255,255,255,0.08)' }}>
+          <div className="space-y-4">
+            <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-white"
+                style={{ textShadow: '0 0 60px rgba(255,255,255,0.1)' }}>
               SENTINELA{" "}
-              <span className="text-emerald-400" style={{ textShadow: '0 0 30px rgba(52,211,153,0.5)' }}>
+              <span className="text-emerald-400" style={{ textShadow: '0 0 40px rgba(52,211,153,0.6)' }}>
                 PRO
               </span>
             </h1>
-            <p className="text-slate-400 text-[10px] font-bold tracking-[0.2em] uppercase max-w-[280px] mx-auto">
-              Elite Market Analysis &amp; Asset Generation Suite
+            <p className="text-slate-400 text-xs md:text-sm font-black tracking-[0.4em] uppercase max-w-2xl mx-auto opacity-80">
+              ELITE MARKET ANALYSIS • SWING TRADE • IA CLAUDE 3.5
             </p>
           </div>
 
-          <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.05)] backdrop-blur-xl">
-            <div className="relative flex h-2.5 w-2.5">
+          <div className="flex items-center gap-4 px-8 py-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)] backdrop-blur-2xl">
+            <div className="relative flex h-3.5 w-3.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-400" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1">System Status</span>
-              <span className="text-[11px] font-mono text-emerald-400 font-black">ANALYTICS_ONLINE</span>
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1">System Status</span>
+              <span className="text-sm font-mono text-emerald-400 font-black">ANALYTICS_ONLINE</span>
             </div>
           </div>
         </div>
