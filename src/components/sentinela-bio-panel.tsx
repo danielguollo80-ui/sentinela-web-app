@@ -41,7 +41,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-2`}>
         <div className="space-y-0.5">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">{symbol} ANALYSIS</p>
-          <p className="text-4xl font-black text-slate-100 tracking-tighter">${price}</p>
+          <p className="text-4xl font-black text-slate-300 tracking-tighter">${price}</p>
         </div>
         <div className="inline-flex items-center gap-2 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-600/40">
           <Activity className="w-3 h-3 text-slate-400" />
@@ -89,11 +89,11 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
       <div className={`${isSetup ? 'col-span-2' : 'col-span-3'} space-y-4 border-l border-white/5 ${isSetup ? 'pl-6' : 'pl-8'} pr-2`}>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">RSI (14)</span>
-          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-200`}>{rsi}</span>
+          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-400`}>{rsi}</span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono whitespace-nowrap">WT</span>
-          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-200`}>{wt}</span>
+          <span className={`${isSetup ? 'text-3xl' : 'text-4xl'} font-black text-slate-400`}>{wt}</span>
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
           <div className="w-2 h-2 rounded-full bg-sentinela-blue glow-blue" />
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">SENTINELAAI VERDICT</p>
         </div>
-        <p className={`${isSetup ? 'text-[10px]' : 'text-xs'} font-semibold text-slate-300 leading-tight tracking-tight line-clamp-3`}>
+        <p className={`${isSetup ? 'text-[10px]' : 'text-xs'} font-semibold text-slate-300 leading-tight tracking-tight overflow-y-auto max-h-[72px]`}>
           &quot;{verdict}&quot;
         </p>
       </div>
