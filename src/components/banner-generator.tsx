@@ -28,6 +28,8 @@ export const BannerGenerator = () => {
   const chartRef = useRef<SentinelaChartHandle>(null);
   const [scale, setScale] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [cryptoData, setCryptoData] = useState({
     symbol: "BTC/USDT",
@@ -60,6 +62,7 @@ export const BannerGenerator = () => {
 
   const onExport = async () => {
     if (exportRef.current === null) return;
+    setIsExporting(true);
 
     // 1. Get chart screenshot via lightweight-charts native API
     const chartImgUrl = chartRef.current?.takeScreenshot();
@@ -101,24 +104,37 @@ export const BannerGenerator = () => {
       const dataUrl = canvas.toDataURL('image/png');
       const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
 
-      // 3. iOS Safari: use Web Share API or open in new tab
+      // 3. Tentar download — se falhar (iOS), mostra na tela para salvar manualmente
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      let shared = false;
       if (isIOS && navigator.share) {
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const file = new File([blob], fileName, { type: 'image/png' });
-        await navigator.share({ files: [file], title: 'Sentinela Analysis' });
-      } else {
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = dataUrl;
-        link.click();
+        try {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], fileName, { type: 'image/png' });
+          await navigator.share({ files: [file], title: 'Sentinela Analysis' });
+          shared = true;
+        } catch { /* fallback below */ }
+      }
+      if (!shared) {
+        try {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch { /* fallback: show on screen */ }
+        // Mostrar imagem na tela (iOS: segurar para salvar nas Fotos)
+        setPreviewUrl(dataUrl);
       }
     } catch (err) {
       console.error('Export error:', err);
+      alert('Erro ao gerar imagem. Tente novamente.');
     } finally {
       if (placeholder) placeholder.remove();
       if (chartContainer) chartContainer.style.visibility = '';
+      setIsExporting(false);
     }
   };
 
@@ -258,13 +274,23 @@ export const BannerGenerator = () => {
                  {isSyncing ? 'SINCRONIZANDO...' : 'ATUALIZAR DADOS'}
               </ShadButton>
 
-              <ShadButton 
-                 onClick={onExport} 
-                 className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+              <ShadButton
+                 onClick={onExport}
+                 disabled={isExporting}
+                 className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-60"
               >
-                 <Download className="w-5 h-5" />
-                 BAIXAR PARA TWITTER (X)
+                 <Download className={`w-5 h-5 ${isExporting ? 'animate-bounce' : ''}`} />
+                 {isExporting ? 'GERANDO IMAGEM...' : 'BAIXAR PARA TWITTER (X)'}
               </ShadButton>
+
+              {/* Modal para iOS: segurar a imagem para salvar */}
+              {previewUrl && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-4 p-4" onClick={() => setPreviewUrl(null)}>
+                  <p className="text-white text-sm font-bold">📱 Segure a imagem para salvar nas Fotos</p>
+                  <img src={previewUrl} alt="Export" className="max-w-full max-h-[80vh] rounded-xl shadow-2xl" />
+                  <p className="text-slate-400 text-xs">Toque fora para fechar</p>
+                </div>
+              )}
            </div>
         </div>
 
