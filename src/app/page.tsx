@@ -7,10 +7,10 @@ export default function Home() {
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(16,185,129,0.14),transparent)] pointer-events-none" />
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_80%_80%,rgba(14,165,233,0.06),transparent)] pointer-events-none" />
 
-      <div className="relative pt-12 sm:pt-20 pb-24">
+      <div className="relative pt-10 sm:pt-16 pb-24">
         {/* Header */}
-        <div className="container mx-auto px-6 mb-12 flex flex-col items-center text-center gap-8">
-          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] overflow-hidden shadow-[0_0_60px_rgba(16,185,129,0.3)] border border-emerald-500/20 animate-in fade-in zoom-in duration-1000">
+        <div className="container mx-auto px-6 mb-10 flex flex-col items-center text-center gap-6">
+          <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-[2.2rem] overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.25)] border border-emerald-500/20 animate-in fade-in zoom-in duration-1000">
             <img 
               src="/logo-premium.png" 
               alt="Sentinela Logo" 
@@ -18,15 +18,15 @@ export default function Home() {
             />
           </div>
           
-          <div className="space-y-4">
-            <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-white"
-                style={{ textShadow: '0 0 60px rgba(255,255,255,0.1)' }}>
+          <div className="space-y-3">
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white"
+                style={{ textShadow: '0 0 50px rgba(255,255,255,0.08)' }}>
               SENTINELA{" "}
-              <span className="text-emerald-400" style={{ textShadow: '0 0 40px rgba(52,211,153,0.6)' }}>
+              <span className="text-emerald-400" style={{ textShadow: '0 0 35px rgba(52,211,153,0.5)' }}>
                 PRO
               </span>
             </h1>
-            <p className="text-slate-400 text-xs md:text-sm font-black tracking-[0.4em] uppercase max-w-2xl mx-auto opacity-80">
+            <p className="text-slate-400 text-[10px] md:text-xs font-black tracking-[0.3em] uppercase max-w-2xl mx-auto opacity-70">
               ELITE MARKET ANALYSIS • SWING TRADE • IA CLAUDE 3.5
             </p>
           </div>
