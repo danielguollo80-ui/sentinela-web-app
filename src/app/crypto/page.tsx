@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CryptoAnalyzer } from "@/components/crypto-analyzer";
 
 export const metadata = {
@@ -30,12 +31,12 @@ export default function CryptoPage() {
             </p>
           </div>
 
-          <a
+          <Link
             href="/"
             className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors font-mono uppercase tracking-widest"
           >
             ← voltar ao início
-          </a>
+          </Link>
         </div>
 
         <CryptoAnalyzer />

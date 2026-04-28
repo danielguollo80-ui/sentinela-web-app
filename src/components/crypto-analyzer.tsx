@@ -311,10 +311,13 @@ export function CryptoAnalyzer() {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    if (sessionStorage.getItem("sentinel_auth") === "1") {
-      setUnlocked(true);
-    }
+    // Usamos um microtask para evitar o erro de setState síncrono no React 19
+    queueMicrotask(() => {
+      setIsMounted(true);
+      if (typeof window !== "undefined" && sessionStorage.getItem("sentinel_auth") === "1") {
+        setUnlocked(true);
+      }
+    });
   }, []);
 
   const [query, setQuery] = useState("");

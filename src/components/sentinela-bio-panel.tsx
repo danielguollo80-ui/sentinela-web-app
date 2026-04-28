@@ -104,7 +104,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-mono">SENTINELAAI VERDICT</p>
         </div>
         <p className={`${isSetup ? 'text-[10px]' : 'text-xs'} font-bold text-slate-200 leading-tight tracking-tight italic line-clamp-3`}>
-          "{verdict}"
+          &quot;{verdict}&quot;
         </p>
       </div>
 

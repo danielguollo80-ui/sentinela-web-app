@@ -20,7 +20,7 @@ export const BannerGenerator = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [availableMatches, setAvailableMatches] = useState<string[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string>("");
-  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyData, setHistoryData] = useState<unknown[]>([]);
   const exportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -37,7 +37,7 @@ export const BannerGenerator = () => {
     s_4h: "73,200",
     r_4h: "78,500",
     verdict: "CONSOLIDATION NEUTRAL - No reversal triggers detected at current levels. WaveTrend indicates stability.",
-    setup: null as any
+    setup: null as unknown
   });
 
   const [footballData, setFootballData] = useState({
@@ -143,7 +143,9 @@ export const BannerGenerator = () => {
   }, [activeBot, selectedSymbol, selectedMatch]);
 
   useEffect(() => {
-    handleSync();
+    queueMicrotask(() => {
+      handleSync();
+    });
 
     const updateScale = () => {
       if (containerRef.current) {

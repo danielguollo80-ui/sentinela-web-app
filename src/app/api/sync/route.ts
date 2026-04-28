@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const url = process.env.REDIS_URL || '';
     const kv = url ? new Redis(url) : null;
 
-    let fullData: any = null;
+    let fullData: Record<string, unknown> | null = null;
     if (kv) {
       try {
         const raw = await kv.get(`sentinela:${botType}`);
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
             fullData = JSON.parse(raw);
         }
         await kv.quit();
-      } catch (e) {
+      } catch (_e) {
         console.warn('KV not available.');
       }
     }
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
           const pair = cleanSymbol.endsWith('USDT') ? cleanSymbol : cleanSymbol + 'USDT';
           const cleanBase = cleanSymbol.replace('USDT', '');
           
-          let klines: any[] = [];
+          let klines: unknown[][] = [];
           let source = "Bybit";
           const headers = { 
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
                 source = "Bybit Linear";
               }
             }
-          } catch(e) {}
+          } catch(_e) {}
 
           // 2. TRY BYBIT SPOT (Fallback for smaller coins)
           if (klines.length === 0) {
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
                   source = "Bybit Spot";
                 }
               }
-            } catch(e) {}
+            } catch(_e) {}
           }
 
           // 3. TRY CRYPTOCOMPARE (Ultimate Global Fallback)
@@ -142,22 +142,22 @@ export async function GET(request: Request) {
               if (res.ok) {
                 const json = await res.json();
                 if (json.Response === "Success" && json.Data?.Data?.length > 0) {
-                  klines = json.Data.Data.map((d: any) => [
+                  klines = json.Data.Data.map((d: Record<string, unknown>) => [
                     d.time * 1000, d.open, d.high, d.low, d.close, d.volumeto
                   ]);
                   source = "CryptoCompare";
                 }
               }
-            } catch(e) {}
+            } catch(_e) {}
           }
 
           if (klines.length === 0) {
             return NextResponse.json({ error: `Moeda "${cleanSymbol}" não encontrada.` }, { status: 404 });
           }
 
-          const highs = klines.map((k: any) => parseFloat(k[2]));
-          const lows = klines.map((k: any) => parseFloat(k[3]));
-          const closes = klines.map((k: any) => parseFloat(k[4]));
+          const highs = klines.map((k: unknown[]) => parseFloat(k[2] as string));
+          const lows = klines.map((k: unknown[]) => parseFloat(k[3] as string));
+          const closes = klines.map((k: unknown[]) => parseFloat(k[4] as string));
           const price = closes[closes.length - 1];
           
           const { calculateRSI, calculateMACD, calculateBB, calculateEMA, calculateADX, calculateATR } = await import('@/lib/indicators');
@@ -209,10 +209,10 @@ export async function GET(request: Request) {
               wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
               macd_cross: macd.cross
             },
-            history: klines.map((k: any) => ({
-              time: parseInt(k[0]) / 1000,
-              open: parseFloat(k[1]), high: parseFloat(k[2]),
-              low: parseFloat(k[3]),  close: parseFloat(k[4])
+            history: klines.map((k: unknown[]) => ({
+              time: parseInt(k[0] as string) / 1000,
+              open: parseFloat(k[1] as string), high: parseFloat(k[2] as string),
+              low: parseFloat(k[3] as string),  close: parseFloat(k[4] as string)
             })),
             fng: 50,
             fng_label: "Neutral",
@@ -251,7 +251,7 @@ export async function GET(request: Request) {
             if (msg.content[0].type === 'text') {
               realTimeData.ai_analysis = msg.content[0].text;
             }
-          } catch (aiErr) {
+          } catch (_aiErr) {
             realTimeData.ai_analysis = `[Fonte: ${source}] Análise concluída. RSI: ${rsi.toFixed(2)}. Tendência: ${emaPos}. POC: $${poc.toFixed(6)}.`;
           }
           return NextResponse.json({
@@ -278,7 +278,7 @@ export async function GET(request: Request) {
           if (res.ok) {
             const json = await res.json();
             if (json.Response === "Success" && json.Data?.Data) {
-              history = json.Data.Data.map((d: any) => ({
+              history = json.Data.Data.map((d: Record<string, unknown>) => ({
                 time: d.time,
                 open: d.open,
                 high: d.high,
@@ -287,7 +287,7 @@ export async function GET(request: Request) {
               }));
             }
           }
-        } catch(e) {}
+        } catch(_e) {}
       }
 
       // Live Price Override for Cached Symbols
@@ -300,7 +300,7 @@ export async function GET(request: Request) {
             symbolData.price = parseFloat(priceData.USDT);
           }
         }
-      } catch(e) {
+      } catch(_e) {
         console.warn('Live price fetch failed:', e);
       }
 

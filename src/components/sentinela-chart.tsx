@@ -1,6 +1,6 @@
 "use client";
 
-import { createChart, ColorType, ISeriesApi, CandlestickData, CandlestickSeries, LineStyle } from 'lightweight-charts';
+import { createChart, ColorType, ISeriesApi, CandlestickData, CandlestickSeries, LineStyle, IChartApi } from 'lightweight-charts';
 import React, { useEffect, useRef } from 'react';
 
 interface SentinelaChartProps {
@@ -19,7 +19,7 @@ export const SentinelaChart: React.FC<SentinelaChartProps> = ({
   s_4h
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
+  const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
   useEffect(() => {
