@@ -296,16 +296,36 @@ export function CryptoAnalyzer() {
       </form>
 
       {/* Quick Shortcuts */}
-      <div className="flex flex-wrap gap-2 mb-8 justify-center sm:justify-start">
-        {['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA'].map((coin) => (
-          <button
-            key={coin}
-            onClick={() => analyze(coin)}
-            className="px-4 py-1.5 rounded-full bg-slate-900/50 border border-white/10 text-xs font-black text-slate-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:text-emerald-400 transition-all uppercase tracking-widest shadow-sm"
-          >
-            {coin}
-          </button>
-        ))}
+      <div className="space-y-4 mb-10">
+        <div className="flex flex-col gap-2">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Day Trade Monitor</span>
+          <div className="flex flex-wrap gap-2">
+            {['BTC', 'ETH', 'SOL', 'AVAX', 'PEPE', 'JUP', 'POL'].map((coin) => (
+              <button
+                key={coin}
+                onClick={() => analyze(coin)}
+                className="px-4 py-2 rounded-xl bg-slate-900/40 border border-white/5 text-xs font-black text-slate-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:text-emerald-400 transition-all uppercase tracking-widest shadow-sm"
+              >
+                {coin}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Swing Trade Elite</span>
+          <div className="flex flex-wrap gap-2">
+            {['TAO', 'SUI', 'RENDER', 'LINK', 'HYPE', 'PENDLE'].map((coin) => (
+              <button
+                key={coin}
+                onClick={() => analyze(coin)}
+                className="px-4 py-2 rounded-xl bg-slate-900/40 border border-white/5 text-xs font-black text-slate-300 hover:bg-blue-500/20 hover:border-blue-500/50 hover:text-blue-400 transition-all uppercase tracking-widest shadow-sm"
+              >
+                {coin}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading && <LoadingSkeleton />}
