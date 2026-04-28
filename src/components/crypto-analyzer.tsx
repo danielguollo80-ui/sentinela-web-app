@@ -413,7 +413,7 @@ export function CryptoAnalyzer() {
 
       {/* Error */}
       {error && !loading && (
-        <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 glow-blue">
+        <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span className="text-xs font-mono font-bold uppercase tracking-tight">{error}</span>
         </div>
@@ -423,9 +423,9 @@ export function CryptoAnalyzer() {
       {result && !loading && (
         <div className="mt-4 space-y-4">
           {/* Header row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 glass-dark rounded-2xl border border-white/10 glow-blue">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 glass-dark rounded-2xl border border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sentinela-blue flex items-center justify-center shadow-lg glow-blue">
+              <div className="w-10 h-10 rounded-xl bg-sentinela-blue flex items-center justify-center shadow-lg">
                 <span className="text-lg font-black text-white">{result.symbol.split("/")[0].slice(0, 2)}</span>
               </div>
               <div>
@@ -441,7 +441,7 @@ export function CryptoAnalyzer() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-mono font-black text-sentinela-blue text-glow leading-none">${fmtPrice(result.price)}</div>
+              <div className="text-2xl font-mono font-black text-sentinela-blue leading-none">${fmtPrice(result.price)}</div>
               <div className={`text-[10px] font-black tracking-widest mt-1 ${fngColor(result.fng)}`}>
                 FNG {result.fng} • {(result.fng_label ?? "Neutral").toUpperCase()}
               </div>
@@ -466,7 +466,7 @@ export function CryptoAnalyzer() {
                 <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 flex items-center gap-2">
                    <TrendingUp className="w-3 h-3" /> Exponential Moving Averages
                 </h3>
-                <div className={`text-base font-black mb-3 tracking-tight ${emaColor(d1.ema_position)} text-glow`}>
+                <div className={`text-base font-black mb-3 tracking-tight ${emaColor(d1.ema_position)}`}>
                   {d1.ema_position ?? "—"}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -480,7 +480,7 @@ export function CryptoAnalyzer() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="glass-dark rounded-2xl border border-white/5 p-4">
                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Bollinger</h3>
-                   <div className={`text-sm font-black mb-1 ${bbColor(d1.bb_position)} text-glow`}>{d1.bb_position ?? "—"}</div>
+                   <div className={`text-sm font-black mb-1 ${bbColor(d1.bb_position)}`}>{d1.bb_position ?? "—"}</div>
                    <div className="text-[9px] font-bold text-slate-400 uppercase mb-2">
                      <span className={d1.bb_width_label === "COMPRIMIDO" ? "text-amber-400" : d1.bb_width_label === "EXPANDIDO" ? "text-sentinela-emerald" : "text-slate-500"}>
                        {d1.bb_width_label ?? "—"}
@@ -496,7 +496,7 @@ export function CryptoAnalyzer() {
 
                 <div className="glass-dark rounded-2xl border border-white/5 p-4">
                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">MACD Momentum</h3>
-                   <div className={`text-sm font-black mb-1 ${macdColor(d1.macd_cross)} text-glow`}>{d1.macd_cross ?? "—"}</div>
+                   <div className={`text-sm font-black mb-1 ${macdColor(d1.macd_cross)}`}>{d1.macd_cross ?? "—"}</div>
                    <div className="text-[9px] font-bold text-slate-400 uppercase mb-2">{d1.macd_momentum ?? "—"}</div>
                    <div className="flex items-center gap-2">
                       <div className={`w-1.5 h-1.5 rounded-full ${d1.macd_above_zero ? 'bg-sentinela-emerald glow-emerald' : 'bg-rose-500 glow-blue'}`} />
@@ -506,7 +506,7 @@ export function CryptoAnalyzer() {
 
                 <div className="glass-dark rounded-2xl border border-white/5 p-4">
                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1.5">RSI Strength</h3>
-                   <div className={`text-2xl font-mono font-black mb-2 ${rsiColor(d1.rsi)} text-glow`}>{fmtNum(d1.rsi)}</div>
+                   <div className={`text-2xl font-mono font-black mb-2 ${rsiColor(d1.rsi)}`}>{fmtNum(d1.rsi)}</div>
                    <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${(d1.rsi ?? 50) >= 70 ? "bg-rose-500" : (d1.rsi ?? 50) <= 30 ? "bg-sentinela-emerald" : "bg-sentinela-blue"}`}
@@ -543,7 +543,7 @@ export function CryptoAnalyzer() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <StatCell label="Bollinger 4H" value={d4.bb_position ?? "—"} valueClass={bbColor(d4.bb_position)} />
                 <StatCell label="RSI 4H" value={fmtNum(d4.rsi)} valueClass={rsiColor(d4.rsi)} />
-                <StatCell label="VMC Signal" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-sentinela-emerald text-glow" : "text-rose-500 text-glow"} />
+                <StatCell label="VMC Signal" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-sentinela-emerald" : "text-rose-500"} />
                 <StatCell label="WT1 Momentum" value={d4.wt1} valueClass={(d4.wt1 ?? 0) > 0 ? "text-sentinela-emerald" : "text-rose-400"} />
                 <StatCell label="WT Direction" value={d4.wt_dir ?? "—"} valueClass={d4.wt_dir === "UP" ? "text-sentinela-emerald" : "text-rose-400"} />
                 <StatCell label="MACD 4H" value={d4.macd_cross || "NEUTRAL"} valueClass={macdColor(d4.macd_cross)} />
@@ -567,7 +567,7 @@ export function CryptoAnalyzer() {
                        <ChevronUp className="w-3.5 h-3.5 text-rose-500" />
                        <span className="text-[10px] font-black text-rose-300 uppercase">Resist {i + 1}</span>
                     </div>
-                    <span className="text-xs font-mono font-black text-rose-400 text-glow">${fmtPrice(r)}</span>
+                    <span className="text-xs font-mono font-black text-rose-400">${fmtPrice(r)}</span>
                   </div>
                 ))}
               </div>
@@ -578,7 +578,7 @@ export function CryptoAnalyzer() {
                        <ChevronDown className="w-3.5 h-3.5 text-sentinela-emerald" />
                        <span className="text-[10px] font-black text-sentinela-emerald uppercase">Supp {i + 1}</span>
                     </div>
-                    <span className="text-xs font-mono font-black text-sentinela-emerald text-glow">${fmtPrice(s)}</span>
+                    <span className="text-xs font-mono font-black text-sentinela-emerald">${fmtPrice(s)}</span>
                   </div>
                 ))}
               </div>
@@ -586,7 +586,7 @@ export function CryptoAnalyzer() {
           </div>
 
           {/* AI Analysis */}
-          <div className="glass-dark rounded-2xl border border-sentinela-blue/20 p-4 shadow-lg glow-blue relative overflow-hidden">
+          <div className="glass-dark rounded-2xl border border-sentinela-blue/20 p-4 shadow-lg relative overflow-hidden">
             <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center gap-3">
                <div className="w-1.5 h-1.5 rounded-full bg-sentinela-blue glow-blue animate-pulse" />
                AI QUANTITATIVE ANALYSIS — CLAUDE
