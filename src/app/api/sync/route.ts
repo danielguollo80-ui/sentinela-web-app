@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         return sym.toUpperCase().includes('USDT') ? sym.toUpperCase() : `${sym.toUpperCase()}/USDT`;
       };
       const selectedSymbol = resolveSymbol(symbol);
-      const symbolData = fullData[selectedSymbol];
+      const symbolData = fullData[selectedSymbol] as Record<string, unknown>;
 
       if (!symbolData) {
         // MULTI-EXCHANGE REAL-TIME FALLBACK
@@ -301,7 +301,7 @@ export async function GET(request: Request) {
           }
         }
       } catch(_e) {
-        console.warn('Live price fetch failed:', e);
+        console.warn('Live price fetch failed:', _e);
       }
 
       return NextResponse.json({ 
