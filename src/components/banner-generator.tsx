@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toPng } from 'html-to-image';
-import { SentinelaChart } from './sentinela-chart';
+import { SentinelaChart, SentinelaChartHandle } from './sentinela-chart';
 import { SentinelaBioPanel } from './sentinela-bio-panel';
 import { MatchAnalysisPanel } from './match-analysis-panel';
 import { Button as ShadButton } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export const BannerGenerator = () => {
   const [historyData, setHistoryData] = useState<CandlestickData[]>([]);
   const exportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<SentinelaChartHandle>(null);
   const [scale, setScale] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
 
@@ -58,17 +59,17 @@ export const BannerGenerator = () => {
 
   const onExport = async () => {
     if (exportRef.current === null) return;
-    // Replace canvas elements with <img> so html-to-image works on mobile
-    const canvases = Array.from(exportRef.current.querySelectorAll('canvas'));
-    const swapped: { canvas: HTMLCanvasElement; img: HTMLImageElement }[] = [];
-    canvases.forEach(canvas => {
-      const img = document.createElement('img');
-      img.src = canvas.toDataURL('image/png');
-      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
-      canvas.parentNode?.insertBefore(img, canvas);
-      canvas.style.display = 'none';
-      swapped.push({ canvas, img });
-    });
+    // Use lightweight-charts native screenshot (works on Safari/mobile)
+    const chartImgUrl = chartRef.current?.takeScreenshot();
+    const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
+    let placeholder: HTMLImageElement | null = null;
+    if (chartImgUrl && chartContainer) {
+      placeholder = document.createElement('img');
+      placeholder.src = chartImgUrl;
+      placeholder.style.cssText = `width:100%;height:100%;display:block;object-fit:fill;`;
+      chartContainer.style.visibility = 'hidden';
+      chartContainer.parentNode?.insertBefore(placeholder, chartContainer);
+    }
     try {
       const dataUrl = await toPng(exportRef.current, {
         cacheBust: true,
@@ -84,10 +85,8 @@ export const BannerGenerator = () => {
     } catch (err) {
       console.error('Export error:', err);
     } finally {
-      swapped.forEach(({ canvas, img }) => {
-        canvas.style.display = '';
-        img.remove();
-      });
+      if (placeholder) placeholder.remove();
+      if (chartContainer) chartContainer.style.visibility = '';
     }
   };
 
@@ -352,9 +351,10 @@ export const BannerGenerator = () => {
                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter italic">Elite Market Analysis Engine</p>
                                 </div>
                              </div>
-                             <div className="flex-1 mt-6 mb-2 glass rounded-3xl overflow-hidden border border-white/5 relative z-10 min-h-[460px]">
+                             <div className="flex-1 mt-6 mb-2 glass rounded-3xl overflow-hidden border border-white/5 relative z-10 min-h-[460px] chart-capture-container">
                                 {historyData.length > 0 && (
-                                   <SentinelaChart 
+                                   <SentinelaChart
+                                      ref={chartRef}
                                       data={historyData} 
                                       r_1h={cryptoData.r_1h !== "---" ? parseFloat(cryptoData.r_1h.replace(/,/g, '')) : undefined} 
                                       s_1h={cryptoData.s_1h !== "---" ? parseFloat(cryptoData.s_1h.replace(/,/g, '')) : undefined} 
