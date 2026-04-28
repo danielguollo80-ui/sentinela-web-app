@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toPng } from 'html-to-image';
-import html2canvas from 'html2canvas';
 import { SentinelaChart, SentinelaChartHandle } from './sentinela-chart';
 import { SentinelaBioPanel } from './sentinela-bio-panel';
 import { MatchAnalysisPanel } from './match-analysis-panel';
@@ -61,62 +60,47 @@ export const BannerGenerator = () => {
   });
 
   const onExport = async () => {
-    if (exportRef.current === null) return;
+    if (!exportRef.current) return;
     setIsExporting(true);
 
-    // 1. Get chart screenshot via lightweight-charts native API
-    const chartImgUrl = chartRef.current?.takeScreenshot();
-    const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
-    let placeholder: HTMLImageElement | null = null;
+    // 1. Captura o gráfico via API nativa do lightweight-charts (funciona em iOS)
+    const chartImgUrl = chartRef.current?.takeScreenshot() ?? null;
 
-    if (chartImgUrl && chartContainer) {
-      // Absolutely position chart image over the hidden container
-      const bannerRect = exportRef.current.getBoundingClientRect();
-      const chartRect = chartContainer.getBoundingClientRect();
-      placeholder = document.createElement('img');
-      placeholder.src = chartImgUrl;
-      placeholder.style.cssText = [
-        'position:absolute',
-        `left:${chartRect.left - bannerRect.left}px`,
-        `top:${chartRect.top - bannerRect.top}px`,
-        `width:${chartRect.width}px`,
-        `height:${chartRect.height}px`,
-        'z-index:9999',
-        'display:block'
-      ].join(';');
-      exportRef.current.style.position = 'relative';
-      exportRef.current.appendChild(placeholder);
-      chartContainer.style.visibility = 'hidden';
+    // 2. Substitui o <canvas> do gráfico por <img> no DOM para que toPng consiga capturar
+    const chartContainer = exportRef.current.querySelector('.chart-capture-container') as HTMLElement | null;
+    const canvasEl = chartContainer?.querySelector('canvas') as HTMLCanvasElement | null;
+    let replacementImg: HTMLImageElement | null = null;
+
+    if (chartImgUrl && canvasEl) {
+      replacementImg = document.createElement('img');
+      replacementImg.src = chartImgUrl;
+      replacementImg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;display:block';
+      canvasEl.parentElement?.appendChild(replacementImg);
+      canvasEl.style.display = 'none';
     }
 
     try {
-      // 2. Use html2canvas (better iOS/Safari support than html-to-image)
-      const canvas = await html2canvas(exportRef.current, {
-        useCORS: true,
-        allowTaint: true,
-        scale: 2,
+      // 3. Captura o banner inteiro com html-to-image (sem canvas, funciona em Safari/iOS)
+      const dataUrl = await toPng(exportRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
         width: 1200,
         height: 675,
-        backgroundColor: '#020817',
-        logging: false,
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
       const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
-
-      // 3. Tentar download — se falhar (iOS), mostra na tela para salvar manualmente
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      let shared = false;
+
       if (isIOS && navigator.share) {
         try {
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
+          const blob = await (await fetch(dataUrl)).blob();
           const file = new File([blob], fileName, { type: 'image/png' });
           await navigator.share({ files: [file], title: 'Sentinela Analysis' });
-          shared = true;
-        } catch { /* fallback below */ }
-      }
-      if (!shared) {
+        } catch {
+          // Fallback: mostra imagem para salvar manualmente
+          setPreviewUrl(dataUrl);
+        }
+      } else {
         try {
           const link = document.createElement('a');
           link.download = fileName;
@@ -124,16 +108,20 @@ export const BannerGenerator = () => {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-        } catch { /* fallback: show on screen */ }
-        // Mostrar imagem na tela (iOS: segurar para salvar nas Fotos)
+        } catch { /* ignore */ }
         setPreviewUrl(dataUrl);
       }
     } catch (err) {
       console.error('Export error:', err);
-      alert('Erro ao gerar imagem. Tente novamente.');
+      // Fallback de último recurso: mostra só o gráfico (sem o restante do banner)
+      if (chartImgUrl) {
+        setPreviewUrl(chartImgUrl);
+      } else {
+        alert('Erro ao gerar imagem.');
+      }
     } finally {
-      if (placeholder) placeholder.remove();
-      if (chartContainer) chartContainer.style.visibility = '';
+      if (replacementImg) replacementImg.remove();
+      if (canvasEl) canvasEl.style.display = '';
       setIsExporting(false);
     }
   };
