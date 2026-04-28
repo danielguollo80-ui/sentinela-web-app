@@ -304,20 +304,20 @@ export const BannerGenerator = () => {
               <div className="h-8 w-px bg-white/10 hidden md:block" />
 
               {/* Selector based on mode */}
-              <div className="hidden md:flex items-center gap-3">
-                 <Label className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Select {activeBot === 'crypto' ? 'Asset' : 'Match'}:</Label>
-                 <div className="relative min-w-[220px]">
+              <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
+                 <Label className="text-slate-500 text-[10px] font-black uppercase tracking-widest hidden md:block">Select {activeBot === 'crypto' ? 'Asset' : 'Match'}:</Label>
+                 <div className="relative w-full md:min-w-[220px]">
                     <select 
                         value={activeBot === 'crypto' ? selectedSymbol : selectedMatch}
                         onChange={(e) => activeBot === 'crypto' ? setSelectedSymbol(e.target.value) : setSelectedMatch(e.target.value)}
-                        className="w-full bg-slate-950 border border-white/10 text-white text-xs p-2.5 rounded-lg focus:ring-2 focus:ring-sentinela-blue outline-none appearance-none font-bold"
+                        className="w-full bg-slate-950 border border-white/10 text-white text-xs p-3 rounded-xl focus:ring-2 focus:ring-sentinela-blue outline-none appearance-none font-bold shadow-lg"
                     >
                         {activeBot === 'crypto' 
                            ? availableSymbols.map(s => <option key={s} value={s}>{s}</option>)
                            : availableMatches.map(m => <option key={m} value={m}>{m}</option>)
                         }
                     </select>
-                    <ChevronDown className={`absolute right-3 top-2.5 w-4 h-4 ${activeBot === 'crypto' ? 'text-sentinela-blue' : 'text-sentinela-emerald'} pointer-events-none`} />
+                    <ChevronDown className={`absolute right-4 top-3.5 w-4 h-4 ${activeBot === 'crypto' ? 'text-sentinela-blue' : 'text-sentinela-emerald'} pointer-events-none`} />
                  </div>
               </div>
            </div>
