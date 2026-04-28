@@ -143,7 +143,7 @@ export async function GET(request: Request) {
                 const json = await res.json();
                 if (json.Response === "Success" && json.Data?.Data?.length > 0) {
                   klines = json.Data.Data.map((d: Record<string, unknown>) => [
-                    d.time * 1000, d.open, d.high, d.low, d.close, d.volumeto
+                    (d.time as number) * 1000, d.open, d.high, d.low, d.close, d.volumeto
                   ]);
                   source = "CryptoCompare";
                 }
