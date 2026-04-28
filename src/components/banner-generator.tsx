@@ -28,6 +28,7 @@ export const BannerGenerator = () => {
   const [scale, setScale] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingJpg, setIsExportingJpg] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [cryptoData, setCryptoData] = useState({
@@ -59,9 +60,10 @@ export const BannerGenerator = () => {
     }
   });
 
-  const onExport = async () => {
+  const onExport = async (format: 'png' | 'jpg' = 'png') => {
     if (!exportRef.current) return;
-    setIsExporting(true);
+    if (format === 'jpg') setIsExportingJpg(true);
+    else setIsExporting(true);
 
     const SCALE = 2;
     const W = 1200, H = 675;
@@ -137,15 +139,36 @@ export const BannerGenerator = () => {
         ctx.drawImage(chartImg, ox, oy, ow, oh);
       }
 
-      // 4. Exporta
-      const dataUrl = canvas.toDataURL('image/png');
-      const fileName = `sentinela-${activeBot}-${Date.now()}.png`;
+      // 4. Exporta (PNG ou JPG)
+      let dataUrl: string;
+      let mimeType: string;
+      let ext: string;
+
+      if (format === 'jpg') {
+        // Para JPG: fundo branco (JPG não suporta transparência)
+        const jpgCanvas = document.createElement('canvas');
+        jpgCanvas.width = canvas.width;
+        jpgCanvas.height = canvas.height;
+        const jctx = jpgCanvas.getContext('2d')!;
+        jctx.fillStyle = '#020817';
+        jctx.fillRect(0, 0, jpgCanvas.width, jpgCanvas.height);
+        jctx.drawImage(canvas, 0, 0);
+        dataUrl = jpgCanvas.toDataURL('image/jpeg', 0.93);
+        mimeType = 'image/jpeg';
+        ext = 'jpg';
+      } else {
+        dataUrl = canvas.toDataURL('image/png');
+        mimeType = 'image/png';
+        ext = 'png';
+      }
+
+      const fileName = `sentinela-${activeBot}-${Date.now()}.${ext}`;
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
       if (isIOS && navigator.share) {
         try {
           const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], fileName, { type: 'image/png' });
+          const file = new File([blob], fileName, { type: mimeType });
           await navigator.share({ files: [file], title: 'Sentinela Analysis' });
         } catch {
           setPreviewUrl(dataUrl);
@@ -167,6 +190,7 @@ export const BannerGenerator = () => {
       alert('Erro ao gerar imagem.');
     } finally {
       setIsExporting(false);
+      setIsExportingJpg(false);
     }
   };
 
@@ -307,12 +331,21 @@ export const BannerGenerator = () => {
               </ShadButton>
 
               <ShadButton
-                 onClick={onExport}
-                 disabled={isExporting}
+                 onClick={() => onExport('png')}
+                 disabled={isExporting || isExportingJpg}
                  className="w-full h-12 px-8 bg-white hover:bg-slate-100 text-slate-950 font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-60"
               >
                  <Download className={`w-5 h-5 ${isExporting ? 'animate-bounce' : ''}`} />
-                 {isExporting ? 'GERANDO IMAGEM...' : 'BAIXAR PARA TWITTER (X)'}
+                 {isExporting ? 'GERANDO...' : 'BAIXAR PNG — TWITTER (X)'}
+              </ShadButton>
+
+              <ShadButton
+                 onClick={() => onExport('jpg')}
+                 disabled={isExporting || isExportingJpg}
+                 className="w-full h-12 px-8 bg-sky-500 hover:bg-sky-400 text-white font-black gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(14,165,233,0.3)] disabled:opacity-60"
+              >
+                 <Download className={`w-5 h-5 ${isExportingJpg ? 'animate-bounce' : ''}`} />
+                 {isExportingJpg ? 'GERANDO...' : 'BAIXAR JPG — TELEGRAM'}
               </ShadButton>
 
               {/* Modal para iOS: segurar a imagem para salvar */}
