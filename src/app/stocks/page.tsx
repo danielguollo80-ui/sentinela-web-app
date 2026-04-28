@@ -16,7 +16,7 @@ export default function StocksPage() {
       <div className="relative pt-10 pb-24">
         {/* Header */}
         <div className="container mx-auto px-6 mb-8 flex flex-col items-center text-center gap-4 max-w-4xl">
-          <div className="relative w-32 h-32 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.3)] border border-emerald-500/20">
+          <div className="relative w-40 h-40 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(16,185,129,0.4)] border border-emerald-500/30">
             <img 
               src="/logo-premium.png" 
               alt="Sentinela Logo" 
@@ -24,18 +24,18 @@ export default function StocksPage() {
             />
           </div>
           
-          <div className="space-y-2">
-            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-white">
-              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.5)" }}>STOCKS</span>
+          <div className="space-y-3">
+            <h1 className="text-8xl md:text-8xl font-black tracking-tighter text-white">
+              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 40px rgba(52,211,153,0.6)" }}>STOCKS</span>
             </h1>
-            <p className="text-slate-300 text-sm font-black tracking-[0.2em] uppercase">
+            <p className="text-lg md:text-lg font-black tracking-[0.2em] uppercase">
               Mercado Americano · NYSE/NASDAQ · IA Gemini 2.0
             </p>
           </div>
 
           <Link
             href="/"
-            className="text-xs text-slate-100 hover:text-emerald-400 transition-colors font-black uppercase tracking-widest pt-2"
+            className="text-base md:text-base text-slate-100 hover:text-emerald-400 transition-colors font-black uppercase tracking-widest pt-4 underline underline-offset-8 decoration-emerald-500/30"
           >
             ← voltar ao início
           </Link>
