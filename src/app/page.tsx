@@ -49,12 +49,18 @@ export default function Home() {
         </div>
 
         {/* Nav shortcuts */}
-        <div className="container mx-auto px-8 mb-8 flex gap-3">
+        <div className="container mx-auto px-8 mb-8 flex flex-wrap gap-3">
           <a
             href="/crypto"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm font-bold hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:text-emerald-200 transition-all shadow-[0_0_12px_rgba(16,185,129,0.08)] hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]"
           >
             <span className="text-base">₿</span> Crypto Analyzer
+          </a>
+          <a
+            href="/stocks"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm font-bold hover:bg-blue-500/20 hover:border-blue-500/50 hover:text-blue-200 transition-all shadow-[0_0_12px_rgba(59,130,246,0.08)] hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+          >
+            <span className="text-base">📈</span> Stocks Analyzer
           </a>
         </div>
 

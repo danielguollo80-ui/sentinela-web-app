@@ -439,7 +439,7 @@ export const BannerGenerator = () => {
                  </ShadButton>
               </div>
 
-              {/* Mobile: gráfico interativo em largura total — visível só abaixo de lg */}
+              {/* Mobile: gráfico interativo em largura total */}
               {activeBot === 'crypto' && historyData.length > 0 && (
                 <div className="block lg:hidden rounded-2xl overflow-hidden border border-white/5 bg-slate-950" style={{ height: '420px' }}>
                   <SentinelaChart
@@ -452,7 +452,68 @@ export const BannerGenerator = () => {
                 </div>
               )}
 
-              <div ref={containerRef} className={`w-full pb-12 flex flex-col ${isZoomed ? 'overflow-x-auto items-start' : 'overflow-hidden items-center justify-center'}`}>
+              {/* Mobile: painel de informações — substitui o banner preview */}
+              {activeBot === 'crypto' && isMobileView && (
+                <div className="space-y-3">
+                  <div className="glass-dark rounded-2xl border border-white/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{cryptoData.symbol}</span>
+                      <span className="text-2xl font-black text-sentinela-blue font-mono">${cryptoData.price}</span>
+                    </div>
+                    <span className={`inline-block text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${cryptoData.trend.toLowerCase().includes('bull') ? 'bg-emerald-500/20 text-emerald-400' : cryptoData.trend.toLowerCase().includes('bear') ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                      {cryptoData.trend}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="glass-dark rounded-2xl border border-white/5 p-3">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">RSI (4H)</div>
+                      <div className={`text-2xl font-black font-mono ${cryptoData.rsi > 70 ? 'text-red-400' : cryptoData.rsi < 30 ? 'text-emerald-400' : 'text-white'}`}>{cryptoData.rsi}</div>
+                    </div>
+                    <div className="glass-dark rounded-2xl border border-white/5 p-3">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">WT (4H)</div>
+                      <div className={`text-2xl font-black font-mono ${cryptoData.wt > 60 ? 'text-red-400' : cryptoData.wt < -60 ? 'text-emerald-400' : 'text-white'}`}>{cryptoData.wt}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="glass-dark rounded-2xl border border-white/5 p-3 space-y-2">
+                      <div className="text-[10px] text-red-400 uppercase tracking-wider font-black">Resistências</div>
+                      <div className="flex items-center justify-between bg-red-500/10 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-slate-500 font-bold">1H</span>
+                        <span className="text-xs font-black text-red-400 font-mono">{cryptoData.r_1h}</span>
+                      </div>
+                      <div className="flex items-center justify-between bg-red-500/10 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-slate-500 font-bold">4H</span>
+                        <span className="text-xs font-black text-red-400 font-mono">{cryptoData.r_4h}</span>
+                      </div>
+                    </div>
+                    <div className="glass-dark rounded-2xl border border-white/5 p-3 space-y-2">
+                      <div className="text-[10px] text-emerald-400 uppercase tracking-wider font-black">Suportes</div>
+                      <div className="flex items-center justify-between bg-emerald-500/10 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-slate-500 font-bold">1H</span>
+                        <span className="text-xs font-black text-emerald-400 font-mono">{cryptoData.s_1h}</span>
+                      </div>
+                      <div className="flex items-center justify-between bg-emerald-500/10 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-slate-500 font-bold">4H</span>
+                        <span className="text-xs font-black text-emerald-400 font-mono">{cryptoData.s_4h}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="glass-dark rounded-2xl border border-white/5 p-4">
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-black mb-2">Análise IA</div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{cryptoData.verdict}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Banner preview — off-screen no mobile (renderiza em background para export), visível no desktop */}
+              <div
+                ref={containerRef}
+                className={isMobileView ? '' : `w-full pb-12 flex flex-col ${isZoomed ? 'overflow-x-auto items-start' : 'overflow-hidden items-center justify-center'}`}
+                style={isMobileView ? { position: 'fixed', top: '-9999px', left: '-9999px', width: '1200px', height: '675px', overflow: 'hidden', pointerEvents: 'none', zIndex: -1 } : {}}
+              >
                  <div
                    style={{
                      width: '1200px',

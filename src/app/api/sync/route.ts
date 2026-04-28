@@ -61,6 +61,9 @@ export async function GET(request: Request) {
       if (botType === 'football') {
         const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json');
         if (fs.existsSync(resultsPath)) fullData = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+      } else if (botType === 'stocks') {
+        const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Acoes', 'latest_results_stocks.json');
+        if (fs.existsSync(resultsPath)) fullData = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
       } else {
         const DATA_DIR = path.join(process.cwd(), 'data');
         const SYNC_FILE = path.join(DATA_DIR, 'bot_sync.json');
@@ -311,6 +314,15 @@ export async function GET(request: Request) {
         allSymbols: Object.keys(fullData),
         allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`)
       });
+    }
+
+    if (botType === 'stocks') {
+      if (symbol) {
+        const stockData = fullData[symbol.toUpperCase()];
+        if (!stockData) return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+        return NextResponse.json({ analysis: stockData });
+      }
+      return NextResponse.json(fullData);
     }
 
     return NextResponse.json(fullData);

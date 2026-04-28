@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { StocksGrid } from "@/components/stocks-grid";
+
+export const metadata = {
+  title: "Stocks Analyzer — Sentinela PRO",
+  description: "Análise quantitativa de ações americanas (NYSE/NASDAQ)",
+};
+
+export default function StocksPage() {
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-[#060b12] text-slate-100 font-sans antialiased selection:bg-emerald-500/30">
+      {/* Background Gradients */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(52,211,153,0.08),transparent)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_80%_80%,rgba(14,165,233,0.03),transparent)] pointer-events-none" />
+
+      <div className="relative pt-10 pb-24">
+        {/* Header */}
+        <div className="container mx-auto px-6 mb-8 flex flex-col items-center text-center gap-4 max-w-4xl">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.3)] border border-emerald-500/20">
+            <img 
+              src="/logo-premium.png" 
+              alt="Sentinela Logo" 
+              className="w-full h-full object-cover scale-110"
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black tracking-tighter text-white">
+              SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.4)" }}>STOCKS</span>
+            </h1>
+            <p className="text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">
+              Mercado Americano · NYSE/NASDAQ · IA Gemini 2.0
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="text-[10px] text-slate-600 hover:text-emerald-400 transition-colors font-mono uppercase tracking-widest"
+          >
+            ← voltar ao início
+          </Link>
+        </div>
+
+        <div className="container mx-auto px-4 max-w-6xl">
+          <StocksGrid />
+        </div>
+      </div>
+    </main>
+  );
+}
