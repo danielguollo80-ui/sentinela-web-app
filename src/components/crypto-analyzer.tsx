@@ -3,26 +3,8 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Search,
-  RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Activity,
-  BarChart2,
-  Zap,
-  AlertTriangle,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
-
 const API_BASE = "/api/sync";
-
-const QUICK_PICKS = ["BTC", "ETH", "SOL", "AVAX", "TAO", "SUI", "XRP"];
 
 interface IndicatorData {
   ema_position?: string;
@@ -76,61 +58,6 @@ interface AnalysisResult {
   };
 }
 
-function TradeSetupBlock({ setup }: { setup: NonNullable<AnalysisResult['setup']> }) {
-  if (setup.tipo === 'NEUTRO') return null;
-  const isLong = setup.tipo === 'LONG';
-  const colorClass = isLong ? 'text-emerald-400' : 'text-rose-400';
-  const borderClass = isLong ? 'border-emerald-500/30' : 'border-rose-500/30';
-  const bgClass = isLong ? 'bg-emerald-950/20' : 'bg-rose-950/20';
-
-  return (
-    <Card className={`overflow-hidden border border-white/10 ${bgClass} glass-dark rounded-2xl`}>
-      <CardHeader className="pb-3 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className={`text-base font-black text-${colorClass} uppercase tracking-widest`}>
-              POSSÍVEL {isLong ? 'FUNDO — PODE COMPRAR' : 'TOPO — PODE VENDER'}
-            </CardTitle>
-          </div>
-          <Badge className={`bg-${colorClass}/20 text-${colorClass} border-${colorClass}/30 font-black px-4 py-1.5 text-sm`}>
-            {setup.score}/10
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6 space-y-6">
-        <div className="space-y-3">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Confluências Detectadas:</p>
-          <div className="flex flex-wrap gap-2">
-            {setup.fatores.map((f, i) => (
-              <span key={i} className="text-xs font-bold text-slate-200 bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                {f}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10">
-            <p className="text-xs font-black text-slate-500 uppercase mb-2">Entrada</p>
-            <p className="text-lg font-black text-white font-mono">${setup.entrada.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10">
-            <p className="text-xs font-black text-slate-500 uppercase mb-2">Stop Loss</p>
-            <p className="text-lg font-black text-rose-400 font-mono">${setup.stop.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10">
-            <p className="text-xs font-black text-slate-500 uppercase mb-2">Alvo 1</p>
-            <p className="text-lg font-black text-emerald-400 font-mono">${setup.alvo1.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-blue-950/30 border border-blue-500/30">
-            <p className="text-xs font-black text-blue-400 uppercase mb-2">R/R Ratio</p>
-            <p className="text-lg font-black text-white font-mono">{setup.rr.toFixed(1)}x</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 const fmtPrice = (val: number | undefined | null, decimals = 2) => {
   if (val == null) return "—";
@@ -205,9 +132,9 @@ function LoadingSkeleton() {
 
 function StatCell({ label, value, valueClass = "" }: { label: string; value: React.ReactNode; valueClass?: string }) {
   return (
-    <div className="flex flex-col gap-1 p-4 rounded-xl bg-slate-900/60 border border-white/5">
-      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{label}</span>
-      <span className={`text-lg font-mono font-bold ${valueClass || "text-white"}`}>{value}</span>
+    <div className="flex flex-col gap-1.5 p-5 rounded-2xl bg-slate-900/60 border border-white/5">
+      <span className="text-[15px] font-black uppercase tracking-widest text-white">{label}</span>
+      <span className={`text-xl font-mono font-black ${valueClass || "text-white"}`}>{value}</span>
     </div>
   );
 }
@@ -230,7 +157,7 @@ const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_CRYPTO_PASSWORD ?? "Sentinela20
 function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   const [pwd, setPwd] = useState("");
   const [wrong, setWrong] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pwd === CORRECT_PASSWORD) {
       sessionStorage.setItem("sentinel_auth", "1");
@@ -275,7 +202,7 @@ export function CryptoAnalyzer() {
     if (!s) return;
     setLoading(true); setError(null); setResult(null);
     try {
-      const res = await fetch(`${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`);
+      const res = await fetch(`${API_BASE}?bot=day_trade&symbol=${encodeURIComponent(s)}`);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
       setResult(data.analysis);
@@ -298,7 +225,7 @@ export function CryptoAnalyzer() {
       {/* Quick Shortcuts */}
       <div className="space-y-4 mb-10">
         <div className="flex flex-col gap-2">
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Day Trade Monitor</span>
+          <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Day Trade Monitor</span>
           <div className="flex flex-wrap gap-2">
             {['BTC', 'ETH', 'SOL', 'AVAX', 'PEPE', 'JUP', 'POL'].map((coin) => (
               <button
@@ -313,7 +240,7 @@ export function CryptoAnalyzer() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Swing Trade Elite</span>
+          <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Swing Trade Elite</span>
           <div className="flex flex-wrap gap-2">
             {['TAO', 'SUI', 'RENDER', 'LINK', 'HYPE', 'PENDLE'].map((coin) => (
               <button
@@ -329,6 +256,11 @@ export function CryptoAnalyzer() {
       </div>
 
       {loading && <LoadingSkeleton />}
+      {error && !loading && (
+        <div className="glass-dark rounded-2xl border border-rose-500/30 p-4 text-center">
+          <p className="text-rose-400 text-sm font-bold">⚠️ {error}</p>
+        </div>
+      )}
       {result && !loading && (
         <div className="space-y-6">
           {/* Elite Horizontal Analysis Bar */}
@@ -337,9 +269,9 @@ export function CryptoAnalyzer() {
               
               {/* SECTION 1: ASSET & PRICE */}
               <div className="lg:col-span-4 p-4 flex flex-col justify-center bg-slate-950/40">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-300">{result.symbol} ANALYSIS</div>
-                  <span className="text-[7px] px-1 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="text-[16px] font-black uppercase tracking-[0.2em] text-slate-200">{result.symbol} ANALYSIS</div>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
                 </div>
                 <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(result.price, 2)}</div>
                 <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
@@ -358,20 +290,20 @@ export function CryptoAnalyzer() {
                       </span>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Entrada</div>
-                      <div className="text-lg md:text-xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Entrada</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Target</div>
-                      <div className="text-lg md:text-xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
+                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Target</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Stop</div>
-                      <div className="text-lg md:text-xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
+                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Stop</div>
+                      <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-300 uppercase tracking-widest">R/R</div>
-                      <div className="text-lg md:text-xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
+                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">R/R</div>
+                      <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
                     </div>
                   </>
                 ) : (
@@ -383,15 +315,15 @@ export function CryptoAnalyzer() {
 
               {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
               <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
-                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">RSI</span>
-                  <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI</span>
+                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
                     {fmtNum(result.indicators_1d.rsi)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-0.5">
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">WT</span>
-                  <span className={`text-2xl md:text-3xl font-black font-mono tracking-tighter ${
+                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">WT</span>
+                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${
                     (result.indicators_4h.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
                     {fmtNum(result.indicators_4h.wt1)}

@@ -1,5 +1,6 @@
 
 export function calculateEMA(data: number[], period: number): number[] {
+  if (data.length === 0) return [];
   const k = 2 / (period + 1);
   const ema = [data[0]];
   for (let i = 1; i < data.length; i++) {
@@ -86,8 +87,9 @@ export function calculateADX(highs: number[], lows: number[], closes: number[], 
 
 export function calculateBB(data: number[], period: number = 20, stdDev: number = 2) {
   const slice = data.slice(-period);
-  const mean = slice.reduce((a, b) => a + b, 0) / period;
-  const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+  const n = slice.length || 1;
+  const mean = slice.reduce((a, b) => a + b, 0) / n;
+  const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
   const sd = Math.sqrt(variance);
   
   const upper = mean + stdDev * sd;
