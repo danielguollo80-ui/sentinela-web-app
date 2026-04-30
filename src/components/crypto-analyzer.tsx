@@ -202,7 +202,7 @@ export function CryptoAnalyzer() {
     if (!s) return;
     setLoading(true); setError(null); setResult(null);
     try {
-      const res = await fetch(`${API_BASE}?bot=day_trade&symbol=${encodeURIComponent(s)}`);
+      const res = await fetch(`${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
       setResult(data.analysis);
@@ -212,8 +212,9 @@ export function CryptoAnalyzer() {
   if (!isMounted) return null;
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
-  const d1 = result?.indicators_1d ?? {};
-  const d4 = result?.indicators_4h ?? {};
+  const d1 = result?.indicators_1d ?? (result as any)?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
+  const d4 = result?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
+  const displayPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -273,10 +274,12 @@ export function CryptoAnalyzer() {
                   <div className="text-[16px] font-black uppercase tracking-[0.2em] text-slate-200">{result.symbol} ANALYSIS</div>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
                 </div>
-                <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(result.price, 2)}</div>
-                <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
-                  FNG {result.fng} • {result.fng_label}
-                </div>
+                <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(displayPrice, 2)}</div>
+                {result.fng != null && (
+                  <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
+                    FNG {result.fng} • {result.fng_label}
+                  </div>
+                )}
               </div>
 
               {/* SECTION 2: TRADE SETUP (If exists) */}
@@ -369,7 +372,7 @@ export function CryptoAnalyzer() {
                 Critical Support Levels
               </h3>
               <div className="space-y-3">
-                {result.supports.slice(0, 3).map((s: number, i: number) => (
+                {(result.supports ?? []).slice(0, 3).map((s: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
                       <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
@@ -387,7 +390,7 @@ export function CryptoAnalyzer() {
                 Critical Resistance Levels
               </h3>
               <div className="space-y-3">
-                {result.resistances.slice(0, 3).map((r: number, i: number) => (
+                {(result.resistances ?? []).slice(0, 3).map((r: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
                       <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
