@@ -71,6 +71,104 @@ export async function GET(request: Request) {
       }
     }
 
+    // Stocks real-time fallback (runs before fullData null check)
+    if (botType === 'stocks' && symbol) {
+      const sym = symbol.toUpperCase();
+      // Return cached data if available
+      if (fullData?.[sym]) {
+        return NextResponse.json({ analysis: fullData[sym] });
+      }
+      // Real-time analysis via Yahoo Finance
+      try {
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        };
+        const yahooRes = await fetch(
+          `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`,
+          { headers, next: { revalidate: 0 } }
+        );
+        if (!yahooRes.ok) {
+          return NextResponse.json({ error: `Ação "${sym}" não encontrada.` }, { status: 404 });
+        }
+        const yahooJson = await yahooRes.json();
+        const chartResult = yahooJson.chart?.result?.[0];
+        if (!chartResult) {
+          return NextResponse.json({ error: `Ação "${sym}" não encontrada.` }, { status: 404 });
+        }
+        const meta = chartResult.meta;
+        const quotes = chartResult.indicators?.quote?.[0] || {};
+        const closes = ((quotes.close || []) as (number | null)[]).filter((c): c is number => c != null);
+        const highs  = ((quotes.high  || []) as (number | null)[]).filter((h): h is number => h != null);
+        const lows   = ((quotes.low   || []) as (number | null)[]).filter((l): l is number => l != null);
+        if (closes.length < 20) {
+          return NextResponse.json({ error: `Dados insuficientes para "${sym}".` }, { status: 404 });
+        }
+        const price = (meta.regularMarketPrice as number) || closes[closes.length - 1];
+        const { calculateRSI, calculateMACD, calculateEMA, calculateATR, calculateBB, calculateADX } = await import('@/lib/indicators');
+        const rsi     = calculateRSI(closes, 14);
+        const macd    = calculateMACD(closes);
+        const ema200  = calculateEMA(closes, 200).pop() ?? 0;
+        const ema50   = calculateEMA(closes, 50).pop()  ?? 0;
+        const ema21   = calculateEMA(closes, 21).pop()  ?? 0;
+        const atr     = calculateATR(highs, lows, closes, 14).pop() ?? 0;
+        const bb      = calculateBB(closes);
+        const adxData = calculateADX(highs, lows, closes, 14);
+        const trend   = price > ema200 ? "Bullish" : "Bearish";
+        let emaPos = "NEUTRO";
+        if (price > ema21 && ema21 > ema50 && ema50 > ema200) emaPos = "BULLISH FORTE";
+        else if (price > ema200) emaPos = "BULLISH";
+        else if (price < ema21 && ema21 < ema50 && ema50 < ema200) emaPos = "BEARISH FORTE";
+        else if (price < ema200) emaPos = "BEARISH";
+        // Pivot points for S/R
+        const prevH = highs[highs.length - 2] || price;
+        const prevL = lows[lows.length - 2]  || price;
+        const prevC = closes[closes.length - 2] || price;
+        const pp = (prevH + prevL + prevC) / 3;
+        const r1 = (2 * pp) - prevL;
+        const s1 = (2 * pp) - prevH;
+        const r2 = pp + (prevH - prevL);
+        const s2 = pp - (prevH - prevL);
+        const realtimeData: Record<string, unknown> = {
+          symbol: sym,
+          price,
+          rsi,
+          trend,
+          supports:    [s1, s2].sort((a, b) => b - a),
+          resistances: [r1, r2].sort((a, b) => a - b),
+          indicators_1d: {
+            rsi, macd_cross: macd.cross, macd_above_zero: macd.aboveZero,
+            bb_position: bb.position, bb_upper: bb.upper, bb_lower: bb.lower,
+            ema_position: emaPos, ema21, ema50, ema200,
+            adx: adxData.adx, atr,
+          },
+          ai_analysis: `[Yahoo Finance] Analisando ${sym}...`,
+          timestamp: Date.now() / 1000,
+          last_update: new Date().toISOString()
+        };
+        // AI Analysis
+        try {
+          const Anthropic = (await import('@anthropic-ai/sdk')).default;
+          const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+          const msg = await anthropic.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 350,
+            messages: [{
+              role: "user",
+              content: `Analise a ação ${sym} (NYSE/NASDAQ, dados Yahoo Finance):\n- Preço: $${price.toFixed(2)}\n- RSI: ${rsi.toFixed(2)}\n- Tendência EMA: ${emaPos}\n- ADX: ${adxData.adx.toFixed(2)}\n- MACD: ${macd.cross}\n- BB: ${bb.position}\n- ATR: $${atr.toFixed(2)}\n\nFormato obrigatório:\nSYMBOL: ${sym}\nVEREDITO: [emoji] [COMPRA/VENDA/NEUTRO]\nSCORE: [X/10]\nTÉCNICO: [1 linha]\nSETUP: Entrada $X | Stop $X | Alvo $X | R/R X:1\nRISCO: [1 linha]`
+            }]
+          });
+          if (msg.content[0].type === 'text') realtimeData.ai_analysis = msg.content[0].text;
+        } catch (_aiErr) {
+          realtimeData.ai_analysis = `SYMBOL: ${sym}\nVEREDITO: ${trend === 'Bullish' ? '🟢 COMPRA' : '🔴 VENDA'}\nSCORE: N/A\nTÉCNICO: RSI ${rsi.toFixed(2)} | ${emaPos}\nSETUP: N/A\nRISCO: Análise IA indisponível`;
+        }
+        return NextResponse.json({ analysis: realtimeData });
+      } catch (err) {
+        console.error('Stocks real-time error:', err);
+        return NextResponse.json({ error: `Erro ao analisar "${sym}".` }, { status: 500 });
+      }
+    }
+
     if (!fullData) {
       return NextResponse.json({ error: 'No data available.' }, { status: 404 });
     }
@@ -110,14 +208,19 @@ export async function GET(request: Request) {
             'Accept': 'application/json'
           };
 
+          // REAL-TIME ANALYZER
+          const isDayTrade = botType === 'day_trade';
+          const interval = isDayTrade ? '120' : '240';
+          const timeframeLabel = isDayTrade ? '2H' : '4H';
+
           // 1. TRY BYBIT LINEAR (Futures)
           try {
-            const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=1000`, { headers, next: { revalidate: 0 } });
+            const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 0 } });
             if (res.ok) {
               const json = await res.json();
               if (json.retCode === 0 && json.result?.list?.length > 0) {
                 klines = json.result.list.reverse();
-                source = "Bybit Linear";
+                source = `Bybit Linear (${timeframeLabel})`;
               }
             }
           } catch(_e) {}
@@ -125,12 +228,12 @@ export async function GET(request: Request) {
           // 2. TRY BYBIT SPOT (Fallback for smaller coins)
           if (klines.length === 0) {
             try {
-              const res = await fetch(`https://api.bytick.com/v5/market/kline?category=spot&symbol=${pair}&interval=60&limit=1000`, { headers, next: { revalidate: 0 } });
+              const res = await fetch(`https://api.bytick.com/v5/market/kline?category=spot&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 0 } });
               if (res.ok) {
                 const json = await res.json();
                 if (json.retCode === 0 && json.result?.list?.length > 0) {
                   klines = json.result.list.reverse();
-                  source = "Bybit Spot";
+                  source = `Bybit Spot (${timeframeLabel})`;
                 }
               }
             } catch(_e) {}
@@ -139,7 +242,6 @@ export async function GET(request: Request) {
           // 3. TRY CRYPTOCOMPARE (Ultimate Global Fallback)
           if (klines.length === 0) {
             try {
-              // Limpeza extra para CryptoCompare (ex: WOOUSDT -> WOO)
               const ccBase = cleanBase.replace('USDT', '');
               const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=500`, { headers, next: { revalidate: 0 } });
               if (res.ok) {
@@ -148,7 +250,7 @@ export async function GET(request: Request) {
                   klines = json.Data.Data.map((d: Record<string, unknown>) => [
                     (d.time as number) * 1000, d.open, d.high, d.low, d.close, d.volumeto
                   ]);
-                  source = "CryptoCompare";
+                  source = "CryptoCompare (1H)";
                 }
               }
             } catch(_e) {}
@@ -229,17 +331,15 @@ export async function GET(request: Request) {
               apiKey: process.env.ANTHROPIC_API_KEY
             });
 
-            if (!anthropic.apiKey) {
-              throw new Error("API Key ausente");
-            }
-
-            const prompt = `Analise a criptomoeda ${selectedSymbol} (Fonte: ${source}):
+            const prompt = `Analise a criptomoeda ${selectedSymbol} (Timeframe: ${timeframeLabel} - Fonte: ${source}):
             - Preço Atual: $${price}
-            - RSI (1D): ${rsi.toFixed(2)}
+            - RSI (${timeframeLabel}): ${rsi.toFixed(2)}
             - Tendência EMA: ${emaPos}
             - Força da Tendência (ADX): ${adxData.adx.toFixed(2)}
             - POC (Pivot): $${poc.toFixed(6)}
             - Direcional: DI+ (${adxData.plusDI.toFixed(2)}) / DI- (${adxData.minusDI.toFixed(2)})
+            
+            Matemática de análise: ${isDayTrade ? 'DAY TRADE (Curto Prazo - 2H/30M)' : 'SWING TRADE (Médio Prazo - 4H/1D)'}.
             
             Forneça um relatório estratégico em Português (Brasil).
             Diga se é hora de COMPRA, VENDA ou AGUARDAR.
@@ -317,11 +417,6 @@ export async function GET(request: Request) {
     }
 
     if (botType === 'stocks') {
-      if (symbol) {
-        const stockData = fullData[symbol.toUpperCase()];
-        if (!stockData) return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
-        return NextResponse.json({ analysis: stockData });
-      }
       return NextResponse.json(fullData);
     }
 
