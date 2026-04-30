@@ -209,7 +209,7 @@ export async function GET(request: Request) {
           };
 
           // REAL-TIME ANALYZER
-          const isDayTrade = botType === 'day_trade';
+          const isDayTrade = (botType as string) === 'day_trade';
           const interval = isDayTrade ? '120' : '240';
           const timeframeLabel = isDayTrade ? '2H' : '4H';
 
