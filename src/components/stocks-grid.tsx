@@ -85,12 +85,25 @@ function adxColor(adx?: number) {
 
 function SearchResult({ stock }: { stock: StockAnalysis }) {
   const isBullish = stock.trend === "Bullish";
-  const verdict = stock.ai_analysis.includes("COMPRA") ? "COMPRA"
-                : stock.ai_analysis.includes("VENDA")  ? "VENDA"
-                : "AGUARDAR";
-  const verdictColor = verdict === "COMPRA" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
-                     : verdict === "VENDA"  ? "text-rose-400 bg-rose-400/10 border-rose-400/20"
-                     : "text-amber-400 bg-amber-400/10 border-amber-400/20";
+  
+  // Mapeamento de Vereditos Estilo Crypto
+  const getStatus = (tipo?: string) => {
+    const map: Record<string, { label: string; color: string; icon: string }> = {
+      'STRONG_LONG':     { label: 'COMPRA CONFIRMADA', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30', icon: '✅' },
+      'LONG':            { label: 'OPORTUNIDADE COMPRA', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20', icon: '🟢' },
+      'STRONG_SHORT':    { label: 'VENDA CONFIRMADA', color: 'text-rose-400 bg-rose-400/10 border-rose-400/30', icon: '🔴' },
+      'SHORT':           { label: 'OPORTUNIDADE VENDA', color: 'text-rose-400 bg-rose-400/10 border-rose-400/20', icon: '🔴' },
+      'OVERSOLD_BULL':   { label: 'SOBRECOMPRA (TOPO)', color: 'text-orange-400 bg-orange-400/10 border-orange-400/20', icon: '🔥' },
+      'OVERSOLD_BEAR':   { label: 'SOBREVENDA (FUNDO)', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20', icon: '❄️' },
+      'POSSIBLE_TOP':    { label: 'POSSÍVEL TOPO', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20', icon: '🏔️' },
+      'POSSIBLE_BOTTOM': { label: 'POSSÍVEL FUNDO', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', icon: '⚓' },
+      'NEUTRO':          { label: 'AGUARDAR', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20', icon: '⚖️' }
+    };
+    return map[tipo || 'NEUTRO'] || map['NEUTRO'];
+  };
+
+  const status = getStatus((stock as any).setup_tipo);
+  const score = (stock as any).setup_score ?? 0;
   
   const d1 = stock.indicators_1d;
 
@@ -115,13 +128,14 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
           {/* SECTION 2: VERDICT BOX */}
           <div className="lg:col-span-5 p-6 flex flex-col justify-center items-center bg-slate-950/20">
              <div className="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-3">Veredito do Sentinela</div>
-             <Badge className={`${verdictColor} font-black text-2xl px-10 py-4 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border-2`}>
-                {verdict}
+             <Badge className={`${status.color} font-black text-xl px-8 py-3 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border-2 flex items-center gap-2`}>
+                <span className="text-2xl">{status.icon}</span> {status.label}
              </Badge>
-             <div className="mt-4 text-[11px] text-slate-500 font-bold uppercase tracking-widest italic flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
-                Aguardando setup de elite...
-             </div>
+             {score > 0 && (
+                <div className="mt-3 text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">
+                   CONFIANÇA: {score}/10
+                </div>
+             )}
           </div>
 
           {/* SECTION 3: KEY INDICATORS (RSI) */}
