@@ -27,7 +27,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-slate-400 text-[10px] md:text-xs font-black tracking-[0.3em] uppercase max-w-2xl mx-auto opacity-70">
-              ELITE MARKET ANALYSIS • SWING TRADE • IA CLAUDE 3.5
+              ELITE MARKET ANALYSIS • SWING TRADE • IA CLAUDE SONNET 4.6
             </p>
           </div>
 

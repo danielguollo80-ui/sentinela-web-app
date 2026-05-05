@@ -46,6 +46,7 @@ interface AnalysisResult {
   indicators_1d: IndicatorData;
   indicators_4h: IndicatorData;
   ai_analysis: string;
+  veredito?: "APROVADO" | "VETADO" | "AGUARDAR" | "ERRO";
   setup?: {
     tipo: string;
     score: number;
@@ -228,7 +229,7 @@ export function CryptoAnalyzer() {
         <div className="flex flex-col gap-2">
           <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Day Trade Monitor</span>
           <div className="flex flex-wrap gap-2">
-            {['BTC', 'ETH', 'SOL', 'AVAX', 'PEPE', 'JUP', 'POL'].map((coin) => (
+            {['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'AVAX'].map((coin) => (
               <button
                 key={coin}
                 onClick={() => analyze(coin)}
@@ -243,7 +244,7 @@ export function CryptoAnalyzer() {
         <div className="flex flex-col gap-2">
           <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Swing Trade Elite</span>
           <div className="flex flex-wrap gap-2">
-            {['TAO', 'SUI', 'RENDER', 'LINK', 'HYPE', 'PENDLE'].map((coin) => (
+            {['BTC', 'ETH', 'SOL', 'XRP'].map((coin) => (
               <button
                 key={coin}
                 onClick={() => analyze(coin)}
@@ -280,6 +281,19 @@ export function CryptoAnalyzer() {
                     FNG {result.fng} • {result.fng_label}
                   </div>
                 )}
+                {result.veredito && (
+                  <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${
+                    result.veredito === "APROVADO" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" :
+                    result.veredito === "VETADO" ? "bg-rose-500/20 border-rose-500/40 text-rose-400" :
+                    "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      result.veredito === "APROVADO" ? "bg-emerald-400 animate-pulse" :
+                      result.veredito === "VETADO" ? "bg-rose-400" : "bg-amber-400"
+                    }`} />
+                    IA AUDIT: {result.veredito}
+                  </div>
+                )}
               </div>
 
               {/* SECTION 2: TRADE SETUP (If exists) */}
@@ -287,27 +301,37 @@ export function CryptoAnalyzer() {
                 {result.setup && result.setup.tipo !== 'NEUTRO' ? (
                   <>
                     <div className="col-span-2 flex items-center gap-2 mb-0.5">
-                      <div className={`w-1.5 h-1.5 rounded-full animate-ping ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'} ${result.veredito === "APROVADO" ? "animate-ping" : ""}`} />
                       <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
+                        {result.veredito !== "APROVADO" && " • SOB AUDITORIA"}
                       </span>
                     </div>
-                    <div>
-                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Entrada</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Target</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Stop</div>
-                      <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">R/R</div>
-                      <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
-                    </div>
+                    {result.veredito === "APROVADO" ? (
+                      <>
+                        <div>
+                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Entrada</div>
+                          <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                        </div>
+                        <div>
+                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Target</div>
+                          <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
+                        </div>
+                        <div>
+                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Stop</div>
+                          <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
+                        </div>
+                        <div>
+                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">R/R</div>
+                          <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="col-span-2 py-4">
+                        <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Sinal Aguardando Confirmação IA</div>
+                        <div className="text-slate-600 text-xs italic font-medium">Os valores de entrada e stop foram ocultados para sua segurança até que a IA valide a confluência técnica.</div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="col-span-2 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest italic py-4">
@@ -337,10 +361,24 @@ export function CryptoAnalyzer() {
             </div>
           </div>
 
-          <Tabs defaultValue="1d">
-            <TabsList className="bg-slate-950 p-1 h-14 w-full rounded-xl">
-              <TabsTrigger value="1d" className="flex-1 text-sm font-bold">DIÁRIO (1D)</TabsTrigger>
-              <TabsTrigger value="4h" className="flex-1 text-sm font-bold">TÁTICO (4H)</TabsTrigger>
+          <Tabs defaultValue="1d" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+              <TabsTrigger 
+                value="1d" 
+                className="rounded-xl font-black text-xs md:text-sm tracking-wider transition-all duration-200
+                           text-white bg-slate-800/80
+                           data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
+              >
+                ESTRATÉGICO (1D)
+              </TabsTrigger>
+              <TabsTrigger 
+                value="4h" 
+                className="rounded-xl font-black text-xs md:text-sm tracking-wider transition-all duration-200
+                           text-white bg-slate-800/80
+                           data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
+              >
+                TÁTICO (4H)
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="1d" className="mt-6 space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -358,8 +396,11 @@ export function CryptoAnalyzer() {
             <TabsContent value="4h" className="mt-6 space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <StatCell label="RSI 4H" value={fmtNum(d4.rsi)} valueClass={rsiColor(d4.rsi)} />
-                <StatCell label="VMC" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-emerald-400" : "text-rose-400"} />
+                <StatCell label="VMC" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-emerald-400" : d4.vmc_dot === "RED" ? "text-rose-400" : "text-amber-400"} />
                 <StatCell label="WT1" value={d4.wt1?.toFixed(2)} valueClass={(d4.wt1 ?? 0) > 0 ? "text-emerald-400" : "text-rose-400"} />
+                <StatCell label="MFI" value={fmtNum(d4.mfi)} valueClass={d4.mfi >= 80 ? "text-rose-400" : d4.mfi <= 20 ? "text-emerald-400" : "text-white"} />
+                <StatCell label="Divergência" value={d4.divergence ?? "NEUTRO"} valueClass={d4.divergence?.includes("BULLISH") ? "text-emerald-400" : d4.divergence?.includes("BEARISH") ? "text-rose-400" : "text-slate-400"} />
+                <StatCell label="Volatilidade" value={d4.bb_width_label ?? "—"} valueClass={d4.bb_width_label === "SQUEEZE" ? "text-amber-400 animate-pulse" : "text-blue-400"} />
               </div>
             </TabsContent>
           </Tabs>

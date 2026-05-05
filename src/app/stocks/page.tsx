@@ -29,7 +29,7 @@ export default function StocksPage() {
               SENTINELA <span className="text-emerald-400" style={{ textShadow: "0 0 30px rgba(52,211,153,0.5)" }}>STOCKS</span>
             </h1>
             <p className="text-slate-300 text-sm font-black tracking-[0.2em] uppercase">
-              Mercado Americano · NYSE/NASDAQ · IA Claude 3.5
+              Mercado Americano · NYSE/NASDAQ · IA Claude Sonnet 4.6
             </p>
           </div>
 
