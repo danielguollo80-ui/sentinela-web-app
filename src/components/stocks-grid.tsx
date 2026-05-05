@@ -41,8 +41,8 @@ interface StockAnalysis {
   indicators_1d?: IndicatorData;
 }
 
-const QUICK_TECH = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'AMD'];
-const QUICK_WATCH = ['XOM', 'XPO', 'ARM', 'MRVL', 'TXN', 'SMR', 'OKLO', 'MSTR', 'RGTI', 'HIMS', 'RBLX'];
+const QUICK_TECH = ['NVDA', 'TSLA', 'AMD', 'AAPL', 'AMZN', 'GOOGL'];
+const QUICK_WATCH = ['MSTR', 'ARM'];
 
 function fmtPrice(v: number) {
   if (v >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -56,10 +56,56 @@ function SkeletonPulse({ className = "" }: { className?: string }) {
 function StatCell({ label, value, valueClass = "" }: { label: string; value: React.ReactNode; valueClass?: string }) {
   return (
     <div className="flex flex-col gap-1.5 p-5 rounded-2xl bg-slate-900/60 border border-white/5 shadow-sm hover:bg-slate-800/40 transition-colors">
-      <span className="text-[13px] font-black uppercase tracking-widest text-slate-400">{label}</span>
-      <span className={`text-xl md:text-2xl font-mono font-black ${valueClass || "text-white"}`}>{value}</span>
+      <span className="text-[15px] font-black uppercase tracking-widest text-white/70">{label}</span>
+      <span className={`text-2xl md:text-3xl font-mono font-black ${valueClass || "text-white"}`}>{value}</span>
     </div>
   );
+}
+
+function stripHtml(text: string) {
+  return text.replace(/<[^>]*>?/gm, '');
+}
+
+function parseAnalysis(text: string) {
+  const cleanText = stripHtml(text);
+  const data: Record<string, string> = {};
+  
+  // Regex mais robusto para pegar chaves mesmo se estiverem na mesma linha ou com tags
+  const keys = ["SYMBOL", "VEREDITO", "SCORE", "TÉCNICO", "INDICADORES", "SETUP", "RISCO"];
+  
+  keys.forEach(key => {
+    const regex = new RegExp(`${key}:?\\s*([^\\n|]+)`, "i");
+    const match = cleanText.match(regex);
+    if (match) {
+      data[key] = match[1].trim();
+    }
+  });
+
+  // Fallback para SCORE se não achar com o regex acima (ex: SCORE: 7/10)
+  if (!data["SCORE"]) {
+    const scoreMatch = cleanText.match(/(\d+\/\d+)/);
+    if (scoreMatch) data["SCORE"] = scoreMatch[0];
+  }
+
+  // Parse Setup: Entrada $X | Stop $X | Alvo $X | R/R X:1
+  const setupRaw = data["SETUP"] || "";
+  const setupParts = setupRaw.split(/[|/]/).map(p => p.trim());
+  const setup: Record<string, string> = {};
+  
+  setupParts.forEach(p => {
+    if (p.toLowerCase().includes("entrada")) setup.entrada = p.replace(/entrada/i, "").trim();
+    if (p.toLowerCase().includes("stop")) setup.stop = p.replace(/stop/i, "").trim();
+    if (p.toLowerCase().includes("alvo")) setup.target = p.replace(/alvo/i, "").trim();
+    if (p.toLowerCase().includes("r/r")) setup.rr = p.replace(/r\/r/i, "").trim();
+  });
+
+  return {
+    verdict: data["VEREDITO"] || "NEUTRO",
+    score: data["SCORE"] || "0/10",
+    tecnico: data["TÉCNICO"] || data["INDICADORES"] || "",
+    risco: data["RISCO"] || "",
+    setup: Object.keys(setup).length > 0 ? setup : null
+  };
 }
 
 function rsiColor(rsi?: number) {
@@ -102,11 +148,11 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
     return map[tipo || 'NEUTRO'] || map['NEUTRO'];
   };
 
-  const status = getStatus((stock as any).setup_tipo);
-  const score = (stock as any).setup_score ?? 0;
-  
+  const parsed = parseAnalysis(stock.ai_analysis);
+  const isNeutral = parsed.verdict.includes("NEUTRO");
+  const isBuy = parsed.verdict.includes("COMPRA");
   const d1 = stock.indicators_1d;
-
+  
   return (
     <div className="space-y-6">
       {/* Elite Horizontal Analysis Bar */}
@@ -114,7 +160,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch divide-y lg:divide-y-0 lg:divide-x divide-white/10">
           
           {/* SECTION 1: ASSET & PRICE */}
-          <div className="lg:col-span-4 p-6 flex flex-col justify-center bg-slate-950/40">
+          <div className="lg:col-span-3 p-6 flex flex-col justify-center bg-slate-950/40">
             <div className="flex items-center gap-2 mb-2">
               <div className="text-[16px] font-black uppercase tracking-[0.2em] text-slate-200">{stock.symbol} ANALYSIS</div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-black border border-blue-500/30">PRO</span>
@@ -125,22 +171,46 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             </div>
           </div>
 
-          {/* SECTION 2: VERDICT BOX */}
-          <div className="lg:col-span-5 p-6 flex flex-col justify-center items-center bg-slate-950/20">
-             <div className="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-3">Veredito do Sentinela</div>
-             <Badge className={`${status.color} font-black text-xl px-8 py-3 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border-2 flex items-center gap-2`}>
-                <span className="text-2xl">{status.icon}</span> {status.label}
-             </Badge>
-             {score > 0 && (
-                <div className="mt-3 text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">
-                   CONFIANÇA: {score}/10
+          {/* SECTION 2: VERDICT & SETUP */}
+          <div className="lg:col-span-6 p-6 grid grid-cols-2 gap-y-3 gap-x-8 items-center bg-slate-950/20">
+            <div className="col-span-2 flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full animate-ping ${isBuy ? 'bg-emerald-400' : isNeutral ? 'bg-amber-400' : 'bg-rose-400'}`} />
+                <span className={`text-[12px] font-black uppercase tracking-[0.2em] ${isBuy ? 'text-emerald-400' : isNeutral ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {parsed.verdict} • {parsed.score}
+                </span>
+              </div>
+            </div>
+
+            {parsed.setup ? (
+              <>
+                <div>
+                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Entrada</div>
+                  <div className="text-xl md:text-2xl font-mono font-black text-white">{parsed.setup.entrada}</div>
                 </div>
-             )}
+                <div>
+                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Target</div>
+                  <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">{parsed.setup.target}</div>
+                </div>
+                <div>
+                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Stop</div>
+                  <div className="text-xl md:text-2xl font-mono font-black text-rose-400">{parsed.setup.stop}</div>
+                </div>
+                <div>
+                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">R/R</div>
+                  <div className="text-xl md:text-2xl font-black text-blue-400">{parsed.setup.rr}</div>
+                </div>
+              </>
+            ) : (
+              <div className="col-span-2 text-center text-slate-500 text-[11px] font-bold uppercase tracking-widest italic py-4">
+                {parsed.tecnico || "Aguardando confirmação de setup..."}
+              </div>
+            )}
           </div>
 
-          {/* SECTION 3: KEY INDICATORS (RSI) */}
-          <div className="lg:col-span-3 p-6 flex flex-col justify-center items-center bg-slate-950/40">
-            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-1">RSI DIÁRIO</span>
+          {/* SECTION 3: QUICK INDICATORS (RSI) */}
+          <div className="lg:col-span-3 p-6 flex flex-col justify-center items-center bg-slate-950/40 gap-1">
+            <span className="text-[14px] font-black text-white/50 uppercase tracking-widest">RSI DIÁRIO</span>
             <span className={`text-5xl md:text-6xl font-black font-mono tracking-tighter ${rsiColor(stock.rsi)}`}>
               {stock.rsi.toFixed(1)}
             </span>
@@ -176,7 +246,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
         <div className="space-y-4">
           {stock.ai_analysis.split('\n').filter(Boolean).map((line, i) => (
             <div key={i} className="text-[16px] text-slate-100 font-medium leading-relaxed px-6 py-5 rounded-2xl bg-slate-950/60 border border-white/5 shadow-md">
-              {line}
+              {stripHtml(line)}
             </div>
           ))}
         </div>
@@ -340,61 +410,64 @@ export function StocksGrid() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stockList.map((stock) => {
             const isBullish = stock.trend === "Bullish";
-            const verdict = stock.ai_analysis.includes("COMPRA") ? "COMPRA"
-                          : stock.ai_analysis.includes("VENDA")  ? "VENDA"
-                          : "AGUARDAR";
-            const verdictColor = verdict === "COMPRA" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
-                               : verdict === "VENDA"  ? "text-rose-400 bg-rose-400/10 border-rose-400/20"
-                               : "text-amber-400 bg-amber-400/10 border-amber-400/20";
+            const parsed = parseAnalysis(stock.ai_analysis);
+            const verdict = parsed.verdict;
+            
+            const isBuy = verdict.includes("COMPRA");
+            const isSell = verdict.includes("VENDA");
+            
+            const verdictColor = isBuy ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
+                               : isSell  ? "text-rose-400 bg-rose-400/10 border-rose-400/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                               : "text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]";
 
             return (
               <Card
                 key={stock.symbol}
-                className="overflow-hidden border border-white/5 bg-slate-900/40 backdrop-blur-xl hover:border-emerald-500/30 transition-all group relative cursor-pointer"
+                className="overflow-hidden border border-white/5 bg-slate-900/40 backdrop-blur-xl hover:border-emerald-500/30 transition-all group relative cursor-pointer shadow-2xl"
                 onClick={() => analyzeStock(stock.symbol)}
               >
                 <div className={`absolute top-0 left-0 w-full h-1 ${isBullish ? "bg-emerald-500/50" : "bg-rose-500/50"}`} />
 
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-4 pt-6">
                   <CardTitle className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center font-black text-white text-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-white/5 flex items-center justify-center font-black text-white text-xl shadow-inner">
                         {stock.symbol.slice(0, 2)}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-xl font-black text-white tracking-tighter">{stock.symbol}</span>
+                        <span className="text-2xl font-black text-white tracking-tighter">{stock.symbol}</span>
                         <div className="flex items-center gap-1.5">
                           {isBullish
                             ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                             : <TrendingDown className="w-3.5 h-3.5 text-rose-400" />}
-                          <span className={`text-[11px] font-black uppercase tracking-widest ${isBullish ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${isBullish ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {stock.trend}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-black text-white font-mono">
+                      <div className="text-2xl font-black text-white font-mono tracking-tighter">
                         ${stock.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </div>
-                      <Badge className={`${verdictColor} font-black text-[11px] px-3 py-1 mt-1`}>{verdict}</Badge>
+                      <Badge className={`${verdictColor} font-black text-[10px] px-3 py-1 mt-2 border border-white/5`}>{verdict}</Badge>
                     </div>
                   </CardTitle>
                 </CardHeader>
 
-                <CardContent className="pt-4 space-y-4">
-                  <div className="p-4 rounded-xl bg-slate-950/40 border border-white/5 text-sm font-medium leading-relaxed text-slate-200 min-h-[140px]">
-                    {stock.ai_analysis}
+                <CardContent className="pt-2 space-y-5">
+                  <div className="p-5 rounded-2xl bg-slate-950/60 border border-white/5 text-[14px] font-medium leading-relaxed text-slate-200 min-h-[120px] shadow-inner">
+                    {stripHtml(stock.ai_analysis).length > 180 ? stripHtml(stock.ai_analysis).slice(0, 180) + "..." : stripHtml(stock.ai_analysis)}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                      <span className="text-gray-400 text-xs font-bold uppercase block mb-2">RSI Status</span>
+                    <div className="p-4 bg-slate-900/50 rounded-2xl border border-white/5 hover:bg-slate-800/50 transition-colors">
+                      <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-2">RSI Status</span>
                       <div className="flex items-center gap-3">
-                        <span className={`text-2xl font-black ${stock.rsi > 70 ? 'text-rose-400' : stock.rsi < 30 ? 'text-emerald-400' : 'text-white'}`}>
+                        <span className={`text-2xl font-black font-mono ${stock.rsi > 70 ? 'text-rose-400' : stock.rsi < 30 ? 'text-emerald-400' : 'text-white'}`}>
                           {stock.rsi.toFixed(1)}
                         </span>
-                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${stock.rsi > 70 ? 'bg-rose-500' : stock.rsi < 30 ? 'bg-emerald-500' : 'bg-blue-500'}`}
                             style={{ width: `${Math.min(100, stock.rsi)}%` }}
@@ -402,10 +475,10 @@ export function StocksGrid() {
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                      <span className="text-gray-400 text-xs font-bold uppercase block mb-2">Last Update</span>
-                      <span className="text-lg font-black text-slate-300">
-                        {new Date(stock.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="p-4 bg-slate-900/50 rounded-2xl border border-white/5 hover:bg-slate-800/50 transition-colors">
+                      <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-2">Score</span>
+                      <span className="text-2xl font-black text-slate-100 font-mono">
+                        {parsed.score}
                       </span>
                     </div>
                   </div>
@@ -415,9 +488,9 @@ export function StocksGrid() {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20 transition-all"
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20 transition-all shadow-md"
                   >
-                    Ver no Yahoo Finance <ExternalLink className="w-3 h-3" />
+                    Análise Completa <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </CardContent>
               </Card>
