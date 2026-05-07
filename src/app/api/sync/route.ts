@@ -284,9 +284,9 @@ export async function GET(request: Request) {
           const volumes = klines.map((k: unknown[]) => parseFloat(k[5] as string));
           const price = closes[closes.length - 1];
           
-          const { 
-            calculateRSI, calculateMACD, calculateBB, calculateEMA, 
-            calculateADX, calculateATR, calculateMFI, detectDivergence 
+          const {
+            calculateRSI, calculateMACD, calculateBB, calculateEMA,
+            calculateADX, calculateATR
           } = await import('@/lib/indicators');
           const rsi = calculateRSI(closes, 14);
           const macd = calculateMACD(closes);
@@ -299,9 +299,6 @@ export async function GET(request: Request) {
           const poc = bb.upper - (bb.upper - bb.lower) / 2;
           
           // Tactical calculations
-          const mfi = calculateMFI(highs, lows, closes, volumes, 14);
-          const rsiSeries = closes.map((_, i) => calculateRSI(closes.slice(0, i + 1), 14));
-          const divergence = detectDivergence(closes, rsiSeries);
           const squeeze = bb.width < 0.05 ? "SQUEEZE" : "EXPANSÃO";
 
           let emaPos = "NEUTRO";
@@ -341,8 +338,6 @@ export async function GET(request: Request) {
               wt1: macd.aboveZero ? 10 : -10, 
               wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
               macd_cross: macd.cross,
-              mfi: mfi,
-              divergence: divergence,
               bb_width_label: squeeze
             },
             history: klines.map((k: unknown[]) => ({
