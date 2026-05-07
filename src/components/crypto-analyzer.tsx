@@ -399,7 +399,7 @@ export function CryptoAnalyzer() {
                 <StatCell label="RSI 4H" value={fmtNum(d4.rsi)} valueClass={rsiColor(d4.rsi)} />
                 <StatCell label="VMC" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-emerald-400" : d4.vmc_dot === "RED" ? "text-rose-400" : "text-amber-400"} />
                 <StatCell label="WT1" value={d4.wt1?.toFixed(2)} valueClass={(d4.wt1 ?? 0) > 0 ? "text-emerald-400" : "text-rose-400"} />
-                <StatCell label="MFI" value={fmtNum(d4.mfi)} valueClass={d4.mfi >= 80 ? "text-rose-400" : d4.mfi <= 20 ? "text-emerald-400" : "text-white"} />
+                <StatCell label="MFI" value={fmtNum(d4.mfi)} valueClass={(d4.mfi ?? 0) >= 80 ? "text-rose-400" : (d4.mfi ?? 0) <= 20 ? "text-emerald-400" : "text-white"} />
                 <StatCell label="Divergência" value={d4.divergence ?? "NEUTRO"} valueClass={d4.divergence?.includes("BULLISH") ? "text-emerald-400" : d4.divergence?.includes("BEARISH") ? "text-rose-400" : "text-slate-400"} />
                 <StatCell label="Volatilidade" value={d4.bb_width_label ?? "—"} valueClass={d4.bb_width_label === "SQUEEZE" ? "text-amber-400 animate-pulse" : "text-blue-400"} />
               </div>
