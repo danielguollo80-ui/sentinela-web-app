@@ -74,9 +74,24 @@ export async function GET(request: Request) {
     // Stocks real-time fallback (runs before fullData null check)
     if (botType === 'stocks' && symbol) {
       const sym = symbol.toUpperCase();
-      // Return cached data if available
+      // Helper: busca pré-market via Yahoo Finance quote API
+      const fetchPreMarket = async (ticker: string) => {
+        try {
+          const h = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
+          const r = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&fields=preMarketPrice,preMarketChange,preMarketChangePercent`, { headers: h, next: { revalidate: 0 } });
+          if (!r.ok) return null;
+          const j = await r.json();
+          const q = j?.quoteResponse?.result?.[0];
+          if (!q?.preMarketPrice) return null;
+          return { preMarketPrice: q.preMarketPrice as number, preMarketChange: q.preMarketChange as number, preMarketChangePercent: q.preMarketChangePercent as number };
+        } catch { return null; }
+      };
+
+      // Return cached data + inject pre-market live
       if (fullData?.[sym]) {
-        return NextResponse.json({ analysis: fullData[sym] });
+        const pm = await fetchPreMarket(sym);
+        const cached = { ...fullData[sym], ...(pm ?? {}) };
+        return NextResponse.json({ analysis: cached });
       }
       // Real-time analysis via Yahoo Finance
       try {
@@ -146,6 +161,9 @@ export async function GET(request: Request) {
           timestamp: Date.now() / 1000,
           last_update: new Date().toISOString()
         };
+        // Pré-market em paralelo
+        const pm = await fetchPreMarket(sym);
+        if (pm) Object.assign(realtimeData, pm);
         // AI Analysis
         try {
           const Anthropic = (await import('@anthropic-ai/sdk')).default;
@@ -263,9 +281,13 @@ export async function GET(request: Request) {
           const highs = klines.map((k: unknown[]) => parseFloat(k[2] as string));
           const lows = klines.map((k: unknown[]) => parseFloat(k[3] as string));
           const closes = klines.map((k: unknown[]) => parseFloat(k[4] as string));
+          const volumes = klines.map((k: unknown[]) => parseFloat(k[5] as string));
           const price = closes[closes.length - 1];
           
-          const { calculateRSI, calculateMACD, calculateBB, calculateEMA, calculateADX, calculateATR } = await import('@/lib/indicators');
+          const { 
+            calculateRSI, calculateMACD, calculateBB, calculateEMA, 
+            calculateADX, calculateATR, calculateMFI, detectDivergence 
+          } = await import('@/lib/indicators');
           const rsi = calculateRSI(closes, 14);
           const macd = calculateMACD(closes);
           const bb = calculateBB(closes);
@@ -275,6 +297,12 @@ export async function GET(request: Request) {
           const ema50 = calculateEMA(closes, 50).pop() ?? 0;
           const ema200 = calculateEMA(closes, 200).pop() ?? 0;
           const poc = bb.upper - (bb.upper - bb.lower) / 2;
+          
+          // Tactical calculations
+          const mfi = calculateMFI(highs, lows, closes, volumes, 14);
+          const rsiSeries = closes.map((_, i) => calculateRSI(closes.slice(0, i + 1), 14));
+          const divergence = detectDivergence(closes, rsiSeries);
+          const squeeze = bb.width < 0.05 ? "SQUEEZE" : "EXPANSÃO";
 
           let emaPos = "NEUTRO";
           if (price > ema21 && ema21 > ema50 && ema50 > ema200) emaPos = "BULLISH FORTE";
@@ -312,7 +340,10 @@ export async function GET(request: Request) {
               vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL", 
               wt1: macd.aboveZero ? 10 : -10, 
               wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
-              macd_cross: macd.cross
+              macd_cross: macd.cross,
+              mfi: mfi,
+              divergence: divergence,
+              bb_width_label: squeeze
             },
             history: klines.map((k: unknown[]) => ({
               time: parseInt(k[0] as string) / 1000,

@@ -39,6 +39,9 @@ interface StockAnalysis {
   supports?: number[];
   resistances?: number[];
   indicators_1d?: IndicatorData;
+  preMarketPrice?: number;
+  preMarketChange?: number;
+  preMarketChangePercent?: number;
 }
 
 const QUICK_TECH = ['NVDA', 'TSLA', 'AMD', 'AAPL', 'AMZN', 'GOOGL'];
@@ -166,6 +169,11 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
               <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-black border border-blue-500/30">PRO</span>
             </div>
             <div className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-1">${fmtPrice(stock.price)}</div>
+            {stock.preMarketPrice && (
+              <div className={`text-[11px] font-bold tracking-wide mb-1 ${(stock.preMarketChange ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                Pré-Market: ${fmtPrice(stock.preMarketPrice)} {(stock.preMarketChange ?? 0) >= 0 ? '▲' : '▼'} {Math.abs(stock.preMarketChangePercent ?? 0).toFixed(2)}%
+              </div>
+            )}
             <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest ${isBullish ? 'text-emerald-400' : 'text-rose-400'}`}>
               Trend: {stock.trend}
             </div>
