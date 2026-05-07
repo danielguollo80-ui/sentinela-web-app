@@ -46,6 +46,7 @@ interface StockAnalysis {
 
 const QUICK_TECH = ['NVDA', 'TSLA', 'AMD', 'AAPL', 'AMZN', 'GOOGL'];
 const QUICK_WATCH = ['MSTR', 'ARM'];
+const QUICK_INDICES = ['SPY', 'QQQ'];
 
 function fmtPrice(v: number) {
   if (v >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -365,6 +366,20 @@ export function StocksGrid() {
                 className="px-4 py-2 rounded-xl bg-slate-900/40 border border-white/5 text-xs font-black text-slate-300 hover:bg-blue-500/20 hover:border-blue-500/50 hover:text-blue-400 transition-all uppercase tracking-widest"
               >
                 {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Índices</span>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_INDICES.map((s) => (
+              <button
+                key={s}
+                onClick={() => analyzeStock(s)}
+                className="px-4 py-2 rounded-xl bg-slate-900/40 border border-white/5 text-xs font-black text-slate-300 hover:bg-amber-500/20 hover:border-amber-500/50 hover:text-amber-400 transition-all uppercase tracking-widest"
+              >
+                {s === 'SPY' ? 'S&P 500' : 'Nasdaq'} ({s})
               </button>
             ))}
           </div>
