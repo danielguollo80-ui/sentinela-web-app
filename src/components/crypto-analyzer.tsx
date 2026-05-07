@@ -229,7 +229,7 @@ export function CryptoAnalyzer() {
         <div className="flex flex-col gap-2">
           <span className="text-[12px] font-black text-white uppercase tracking-widest ml-1">Day Trade Monitor</span>
           <div className="flex flex-wrap gap-2">
-            {['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'AVAX'].map((coin) => (
+            {['BTC', 'ETH', 'SOL', 'XRP', 'LINK', 'DOGE', 'AVAX'].map((coin) => (
               <button
                 key={coin}
                 onClick={() => analyze(coin)}
