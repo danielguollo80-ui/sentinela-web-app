@@ -31,6 +31,7 @@ interface IndicatorData {
   wt1?: number;
   wt_dir?: string;
   vmc_dot?: string;
+  mfi?: number;
 }
 
 interface AnalysisResult {
