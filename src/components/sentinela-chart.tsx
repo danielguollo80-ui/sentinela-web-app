@@ -80,7 +80,7 @@ export const SentinelaChart = forwardRef<SentinelaChartHandle, SentinelaChartPro
     if (s_1h) candlestickSeries.createPriceLine({ price: s_1h, color: '#34d399', lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'SUPORTE 1H' });
 
     if (data.length > 0) {
-      chart.timeScale().setVisibleLogicalRange({ from: data.length - 150, to: data.length });
+      chart.timeScale().setVisibleLogicalRange({ from: data.length - 300, to: data.length });
     }
 
     const handleResize = () => {
