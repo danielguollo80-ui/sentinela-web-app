@@ -44,31 +44,36 @@ export async function GET(request: Request) {
     const kv = url ? new Redis(url) : null;
 
     let fullData: Record<string, unknown> | null = null;
-    if (kv) {
+
+    // Local files take priority when running on the same machine as the bots
+    const LOCAL_PATHS: Record<string, string> = {
+      football: path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json'),
+      stocks:   path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Acoes', 'latest_results_stocks.json'),
+    };
+    if (botType in LOCAL_PATHS && fs.existsSync(LOCAL_PATHS[botType])) {
+      try {
+        fullData = JSON.parse(fs.readFileSync(LOCAL_PATHS[botType], 'utf8'));
+      } catch (_e) { /* ignora parse error, tenta Redis */ }
+    }
+
+    // Redis fallback (Vercel production or local files not available)
+    if (!fullData && kv) {
       try {
         const raw = await kv.get(`sentinela:${botType}`);
         if (raw) {
             fullData = JSON.parse(raw);
         }
-        await kv.quit();
       } catch (_e) {
         console.warn('KV not available.');
       }
     }
+    if (kv) { try { await kv.quit(); } catch (_e) {} }
 
-    // Local fallback for testing without Redis
-    if (!fullData) {
-      if (botType === 'football') {
-        const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json');
-        if (fs.existsSync(resultsPath)) fullData = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-      } else if (botType === 'stocks') {
-        const resultsPath = path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Acoes', 'latest_results_stocks.json');
-        if (fs.existsSync(resultsPath)) fullData = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-      } else {
-        const DATA_DIR = path.join(process.cwd(), 'data');
-        const SYNC_FILE = path.join(DATA_DIR, 'bot_sync.json');
-        if (fs.existsSync(SYNC_FILE)) fullData = JSON.parse(fs.readFileSync(SYNC_FILE, 'utf8'));
-      }
+    // Crypto local fallback
+    if (!fullData && botType === 'crypto') {
+      const DATA_DIR = path.join(process.cwd(), 'data');
+      const SYNC_FILE = path.join(DATA_DIR, 'bot_sync.json');
+      if (fs.existsSync(SYNC_FILE)) fullData = JSON.parse(fs.readFileSync(SYNC_FILE, 'utf8'));
     }
 
     // Stocks real-time fallback (runs before fullData null check)
