@@ -424,24 +424,74 @@ export async function GET(request: Request) {
         } catch(_e) {}
       }
 
+      const cleanBase = (((symbolData.symbol as string) || selectedSymbol)).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
+
       // Live Price Override for Cached Symbols
       try {
-        const cleanBase = (((symbolData.symbol as string) || selectedSymbol)).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
         const priceRes = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cleanBase}&tsyms=USDT`, { next: { revalidate: 0 } });
         if (priceRes.ok) {
           const priceData = await priceRes.json();
-          if (priceData.USDT) {
-            symbolData.price = parseFloat(priceData.USDT);
-          }
+          if (priceData.USDT) symbolData.price = parseFloat(priceData.USDT);
         }
-      } catch(_e) {
-        console.warn('Live price fetch failed:', _e);
-      }
+      } catch(_e) { console.warn('Live price fetch failed:', _e); }
 
-      return NextResponse.json({ 
-        analysis: symbolData, 
-        match: symbolData, 
-        history, 
+      // Fetch 1H + 15M para aba Day Trade
+      try {
+        type Candle = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
+        const calcDT = (candles: Candle[]) => {
+          if (candles.length < 30) return {};
+          const closes = candles.map(c => c.close);
+          const highs  = candles.map(c => c.high);
+          const lows   = candles.map(c => c.low);
+          const vols   = candles.map(c => c.volumeto ?? 0);
+          const price  = closes[closes.length - 1];
+          // RSI
+          let g = 0, l = 0;
+          for (let i = 1; i <= 14; i++) { const d = closes[i] - closes[i-1]; d >= 0 ? g += d : l -= d; }
+          let ag = g / 14, al = l / 14;
+          for (let i = 15; i < closes.length; i++) { const d = closes[i]-closes[i-1]; ag=(ag*13+(d>0?d:0))/14; al=(al*13+(d<0?-d:0))/14; }
+          const rsi = al === 0 ? 100 : Math.round((100 - 100/(1 + ag/al)) * 10) / 10;
+          // MACD
+          const ema = (data: number[], p: number) => { const k=2/(p+1); let e=data[0]; for(let i=1;i<data.length;i++) e=data[i]*k+e*(1-k); return e; };
+          const m = closes.map((_, i, a) => ema(a.slice(0, i+1), 12) - ema(a.slice(0, i+1), 26));
+          const macdVal = m[m.length-1]; const sigVal = ema(m.slice(-50), 9);
+          const macd_cross = macdVal > sigVal ? 'ALTA (BULLISH)' : 'BAIXA (BEARISH)';
+          // ADX simplified
+          let pdm=0, mdm=0, tr14=0;
+          for (let i = Math.max(1, highs.length-14); i < highs.length; i++) {
+            const up=highs[i]-highs[i-1], dn=lows[i-1]-lows[i];
+            pdm += up>dn&&up>0?up:0; mdm += dn>up&&dn>0?dn:0;
+            tr14 += Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1]));
+          }
+          const plus_di = tr14>0 ? Math.round(pdm/tr14*1000)/10 : 0;
+          const minus_di = tr14>0 ? Math.round(mdm/tr14*1000)/10 : 0;
+          const adx = Math.round(Math.abs(plus_di-minus_di)/Math.max(plus_di+minus_di,0.01)*1000)/10;
+          // BB
+          const sl = closes.slice(-20); const mean = sl.reduce((a,b)=>a+b,0)/sl.length;
+          const sd = Math.sqrt(sl.reduce((a,b)=>a+Math.pow(b-mean,2),0)/sl.length);
+          const bbu = mean + 2*sd, bbl = mean - 2*sd;
+          const bb_position = price >= bbu ? 'SUPERIOR' : price <= bbl ? 'INFERIOR' : price > mean ? 'MEIO-SUPERIOR' : 'MEIO-INFERIOR';
+          // EMA
+          const ema21 = Math.round(ema(closes, 21)*10000)/10000;
+          const ema50 = Math.round(ema(closes, 50)*10000)/10000;
+          const ema_position = price>ema21&&price>ema50 ? 'BULLISH' : price<ema21&&price<ema50 ? 'BEARISH' : 'NEUTRO';
+          // Volume
+          const vol20 = vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+          const volume_ratio = Math.round((vol20>0 ? vols[vols.length-1]/vol20 : 1)*10)/10;
+          return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'TRENDING':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
+        };
+        const [r1h, r15m] = await Promise.all([
+          fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } }),
+          fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 0 } })
+        ]);
+        if (r1h.ok)  { const j=await r1h.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_1h  = calcDT(j.Data.Data); }
+        if (r15m.ok) { const j=await r15m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_15m = calcDT(j.Data.Data); }
+      } catch(_e) {}
+
+      return NextResponse.json({
+        analysis: symbolData,
+        match: symbolData,
+        history,
         allSymbols: Object.keys(fullData),
         allMatches: Object.keys(fullData).map(s => s.includes('/') ? s : `${s}/USDT`)
       });

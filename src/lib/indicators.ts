@@ -104,3 +104,44 @@ export function calculateBB(data: number[], period: number = 20, stdDev: number 
   
   return { upper, lower, mean, position: pos, width: (upper - lower) / mean };
 }
+
+export function calculateMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period: number = 14): number {
+  if (closes.length < period + 1) return 50;
+  
+  const tp = highs.map((h, i) => (h + lows[i] + closes[i]) / 3);
+  const rmf = tp.map((t, i) => t * (volumes[i] || 0));
+  
+  let posFlow = 0;
+  let negFlow = 0;
+  
+  const start = Math.max(1, tp.length - period);
+  for (let i = start; i < tp.length; i++) {
+    if (tp[i] > tp[i - 1]) posFlow += rmf[i];
+    else if (tp[i] < tp[i - 1]) negFlow += rmf[i];
+  }
+  
+  if (negFlow === 0) return 100;
+  const mfr = posFlow / negFlow;
+  return 100 - (100 / (1 + mfr));
+}
+
+export function detectDivergence(prices: number[], rsiValues: number[]) {
+  if (prices.length < 20) return "NEUTRO";
+  
+  const currentPrice = prices[prices.length - 1];
+  const prevPrice = prices[prices.length - 10]; // Comparação simplificada 10 períodos atrás
+  const currentRSI = rsiValues[rsiValues.length - 1];
+  const prevRSI = rsiValues[rsiValues.length - 10];
+  
+  // Bullish Divergence: Preço caindo, RSI subindo
+  if (currentPrice < prevPrice && currentRSI > prevRSI && currentRSI < 40) {
+    return "BULLISH DIV";
+  }
+  
+  // Bearish Divergence: Preço subindo, RSI caindo
+  if (currentPrice > prevPrice && currentRSI < prevRSI && currentRSI > 60) {
+    return "BEARISH DIV";
+  }
+  
+  return "NEUTRO";
+}

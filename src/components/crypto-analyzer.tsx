@@ -32,6 +32,7 @@ interface IndicatorData {
   wt_dir?: string;
   vmc_dot?: string;
   mfi?: number;
+  volume_ratio?: number;
 }
 
 interface AnalysisResult {
@@ -46,6 +47,8 @@ interface AnalysisResult {
   news_pt?: string;
   indicators_1d: IndicatorData;
   indicators_4h: IndicatorData;
+  indicators_1h?: IndicatorData;
+  indicators_15m?: IndicatorData;
   ai_analysis: string;
   veredito?: "APROVADO" | "VETADO" | "AGUARDAR" | "ERRO";
   setup?: {
@@ -214,8 +217,10 @@ export function CryptoAnalyzer() {
   if (!isMounted) return null;
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
-  const d1 = result?.indicators_1d ?? (result as any)?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
-  const d4 = result?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
+  const d1  = result?.indicators_1d ?? (result as any)?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
+  const d4  = result?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
+  const d1h = result?.indicators_1h ?? {};
+  const d15 = result?.indicators_15m ?? {};
   const displayPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
 
   return (
@@ -363,22 +368,30 @@ export function CryptoAnalyzer() {
           </div>
 
           <Tabs defaultValue="1d" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
-              <TabsTrigger 
-                value="1d" 
-                className="rounded-xl font-black text-xs md:text-sm tracking-wider transition-all duration-200
+            <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+              <TabsTrigger
+                value="1d"
+                className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200
                            text-white bg-slate-800/80
                            data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
               >
                 ESTRATÉGICO (1D)
               </TabsTrigger>
-              <TabsTrigger 
-                value="4h" 
-                className="rounded-xl font-black text-xs md:text-sm tracking-wider transition-all duration-200
+              <TabsTrigger
+                value="4h"
+                className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200
                            text-white bg-slate-800/80
                            data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
               >
                 TÁTICO (4H)
+              </TabsTrigger>
+              <TabsTrigger
+                value="scalp"
+                className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200
+                           text-white bg-slate-800/80
+                           data-[state=active]:bg-amber-400 data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
+              >
+                SCALP (1H/15M)
               </TabsTrigger>
             </TabsList>
             <TabsContent value="1d" className="mt-6 space-y-4">
@@ -402,6 +415,42 @@ export function CryptoAnalyzer() {
                 <StatCell label="MFI" value={fmtNum(d4.mfi)} valueClass={(d4.mfi ?? 0) >= 80 ? "text-rose-400" : (d4.mfi ?? 0) <= 20 ? "text-emerald-400" : "text-white"} />
                 <StatCell label="Divergência" value={d4.divergence ?? "NEUTRO"} valueClass={d4.divergence?.includes("BULLISH") ? "text-emerald-400" : d4.divergence?.includes("BEARISH") ? "text-rose-400" : "text-slate-400"} />
                 <StatCell label="Volatilidade" value={d4.bb_width_label ?? "—"} valueClass={d4.bb_width_label === "SQUEEZE" ? "text-amber-400 animate-pulse" : "text-blue-400"} />
+              </div>
+            </TabsContent>
+            <TabsContent value="scalp" className="mt-6 space-y-5">
+              {/* 1H Row */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">Timeframe 1H</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
+                  <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
+                  <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
+                  <StatCell label="Bollinger 1H" value={d1h.bb_position ?? "—"} valueClass={bbColor(d1h.bb_position)} />
+                  <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
+                  <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
+                  <StatCell label="Tendência EMA" value={d1h.ema_position ?? "—"} valueClass={emaColor(d1h.ema_position)} />
+                  <StatCell
+                    label="Volume 1H"
+                    value={d1h.volume_ratio != null ? `${d1h.volume_ratio.toFixed(2)}x` : "—"}
+                    valueClass={(d1h.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d1h.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
+                  />
+                </div>
+              </div>
+              {/* 15M Row */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Timeframe 15M</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCell label="RSI 15M" value={fmtNum(d15.rsi)} valueClass={rsiColor(d15.rsi)} />
+                  <StatCell label="MACD 15M" value={d15.macd_cross ?? "—"} valueClass={macdColor(d15.macd_cross)} />
+                  <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label)} />
+                  <StatCell label="Bollinger 15M" value={d15.bb_position ?? "—"} valueClass={bbColor(d15.bb_position)} />
+                </div>
               </div>
             </TabsContent>
           </Tabs>
