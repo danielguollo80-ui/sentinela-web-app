@@ -337,12 +337,16 @@ export async function GET(request: Request) {
               plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : (adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 100,
               minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : (adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 100
             },
-            indicators_4h: { 
-              rsi: rsi, 
-              vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL", 
-              wt1: macd.aboveZero ? 10 : -10, 
-              wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
+            indicators_4h: {
+              rsi: rsi,
               macd_cross: macd.cross,
+              adx: adxData.adx,
+              adx_label: adxData.adx > 25 ? 'FORTE' : adxData.adx > 20 ? 'FRACO' : 'SIDEWAYS',
+              plus_di: adxData.plusDI,
+              minus_di: adxData.minusDI,
+              vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL",
+              wt1: macd.aboveZero ? 10 : -10,
+              wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
               bb_width_label: squeeze
             },
             history: klines.map((k: unknown[]) => ({
