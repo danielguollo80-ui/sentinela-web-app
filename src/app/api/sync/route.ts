@@ -478,7 +478,7 @@ export async function GET(request: Request) {
           // Volume
           const vol20 = vols.slice(-20).reduce((a,b)=>a+b,0)/20;
           const volume_ratio = Math.round((vol20>0 ? vols[vols.length-1]/vol20 : 1)*10)/10;
-          return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'TRENDING':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
+          return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
         };
         const [r1h, r15m] = await Promise.all([
           fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } }),
