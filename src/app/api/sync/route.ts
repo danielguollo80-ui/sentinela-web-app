@@ -404,7 +404,7 @@ export async function GET(request: Request) {
       // Prioritize chart data from the bot payload
       let history = (symbolData.history as unknown[]) || [];
 
-      if (history.length === 0) {
+      if (history.length < 200) {
         try {
           const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
           const cleanBase = cleanSymbol.replace('USDT', '');
