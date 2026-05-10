@@ -466,7 +466,7 @@ export function CryptoAnalyzer() {
                 Critical Support Levels
               </h3>
               <div className="space-y-3">
-                {(result.supports ?? []).slice(0, 3).map((s: number, i: number) => (
+                {(result.supports ?? []).filter(s => s < displayPrice).slice(0, 3).map((s: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
                       <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
@@ -475,6 +475,9 @@ export function CryptoAnalyzer() {
                     <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(s)}</span>
                   </div>
                 ))}
+                {(result.supports ?? []).filter(s => s < displayPrice).length === 0 && (
+                  <p className="text-xs text-slate-500 italic text-center py-2">Sem suportes abaixo do preço atual</p>
+                )}
               </div>
             </div>
 
@@ -484,7 +487,7 @@ export function CryptoAnalyzer() {
                 Critical Resistance Levels
               </h3>
               <div className="space-y-3">
-                {(result.resistances ?? []).slice(0, 3).map((r: number, i: number) => (
+                {(result.resistances ?? []).filter(r => r > displayPrice).slice(0, 3).map((r: number, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
                     <div className="flex items-center gap-3">
                       <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
@@ -493,6 +496,9 @@ export function CryptoAnalyzer() {
                     <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(r)}</span>
                   </div>
                 ))}
+                {(result.resistances ?? []).filter(r => r > displayPrice).length === 0 && (
+                  <p className="text-xs text-slate-500 italic text-center py-2">Sem resistências acima do preço atual</p>
+                )}
               </div>
             </div>
           </div>
