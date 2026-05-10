@@ -266,7 +266,7 @@ export async function GET(request: Request) {
           if (klines.length === 0) {
             try {
               const ccBase = cleanBase.replace('USDT', '');
-              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=500`, { headers, next: { revalidate: 0 } });
+              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=1000&aggregate=4`, { headers, next: { revalidate: 0 } });
               if (res.ok) {
                 const json = await res.json();
                 if (json.Response === "Success" && json.Data?.Data?.length > 0) {
@@ -408,7 +408,7 @@ export async function GET(request: Request) {
         try {
           const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
           const cleanBase = cleanSymbol.replace('USDT', '');
-          const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=500&aggregate=4`, { next: { revalidate: 0 } });
+          const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1500&aggregate=4`, { next: { revalidate: 0 } });
           if (res.ok) {
             const json = await res.json();
             if (json.Response === "Success" && json.Data?.Data) {
