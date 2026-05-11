@@ -455,6 +455,14 @@ export function CryptoAnalyzer() {
                   <StatCell label="MACD 15M" value={d15.macd_cross ?? "—"} valueClass={macdColor(d15.macd_cross)} />
                   <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label)} />
                   <StatCell label="Bollinger 15M" value={d15.bb_position ?? "—"} valueClass={bbColor(d15.bb_position)} />
+                  <StatCell label="DI+ 15M" value={fmtNum(d15.plus_di)} valueClass="text-emerald-400" />
+                  <StatCell label="DI- 15M" value={fmtNum(d15.minus_di)} valueClass="text-rose-400" />
+                  <StatCell label="Tendência EMA" value={d15.ema_position ?? "—"} valueClass={emaColor(d15.ema_position)} />
+                  <StatCell
+                    label="Volume 15M"
+                    value={d15.volume_ratio != null ? `${d15.volume_ratio.toFixed(2)}x` : "—"}
+                    valueClass={(d15.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d15.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
+                  />
                 </div>
               </div>
             </TabsContent>
