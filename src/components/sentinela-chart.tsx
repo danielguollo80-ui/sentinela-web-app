@@ -79,16 +79,18 @@ export const SentinelaChart = forwardRef<SentinelaChartHandle, SentinelaChartPro
     if (r_1h) candlestickSeries.createPriceLine({ price: r_1h, color: '#fb7185', lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'RESISTÊNCIA 1H' });
     if (s_1h) candlestickSeries.createPriceLine({ price: s_1h, color: '#34d399', lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'SUPORTE 1H' });
 
-    if (data.length > 0) {
-      chart.timeScale().setVisibleLogicalRange({ from: data.length - 250, to: data.length });
-    }
-
     const handleResize = () => {
       if (!chartContainerRef.current) return;
       chart.resize(chartContainerRef.current.clientWidth, chartContainerRef.current.clientHeight || 460);
     };
 
-    requestAnimationFrame(handleResize);
+    requestAnimationFrame(() => {
+      handleResize();
+      // Aplica o range após o resize para não ser sobrescrito
+      if (data.length > 0) {
+        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, data.length - 250), to: data.length });
+      }
+    });
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(chartContainerRef.current);
     window.addEventListener('resize', handleResize);
