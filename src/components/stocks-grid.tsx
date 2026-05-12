@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ExternalLink,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface IndicatorData {
   rsi?: number;
@@ -26,6 +27,8 @@ interface IndicatorData {
   ema200?: number;
   adx?: number;
   atr?: number;
+  plus_di?: number;
+  minus_di?: number;
 }
 
 interface StockAnalysis {
@@ -133,133 +136,195 @@ function adxColor(adx?: number) {
   return "text-slate-300";
 }
 
-function SearchResult({ stock }: { stock: StockAnalysis }) {
-  const isBullish = stock.trend === "Bullish";
-  
-  // Mapeamento de Vereditos Estilo Crypto
-  const getStatus = (tipo?: string) => {
-    const map: Record<string, { label: string; color: string; icon: string }> = {
-      'STRONG_LONG':     { label: 'COMPRA CONFIRMADA', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30', icon: '✅' },
-      'LONG':            { label: 'OPORTUNIDADE COMPRA', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20', icon: '🟢' },
-      'STRONG_SHORT':    { label: 'VENDA CONFIRMADA', color: 'text-rose-400 bg-rose-400/10 border-rose-400/30', icon: '🔴' },
-      'SHORT':           { label: 'OPORTUNIDADE VENDA', color: 'text-rose-400 bg-rose-400/10 border-rose-400/20', icon: '🔴' },
-      'OVERSOLD_BULL':   { label: 'SOBRECOMPRA (TOPO)', color: 'text-orange-400 bg-orange-400/10 border-orange-400/20', icon: '🔥' },
-      'OVERSOLD_BEAR':   { label: 'SOBREVENDA (FUNDO)', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20', icon: '❄️' },
-      'POSSIBLE_TOP':    { label: 'POSSÍVEL TOPO', color: 'text-rose-500 bg-rose-500/10 border-rose-500/20', icon: '🏔️' },
-      'POSSIBLE_BOTTOM': { label: 'POSSÍVEL FUNDO', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', icon: '⚓' },
-      'NEUTRO':          { label: 'AGUARDAR', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20', icon: '⚖️' }
-    };
-    return map[tipo || 'NEUTRO'] || map['NEUTRO'];
-  };
+function bbColor(pos?: string) {
+  if (!pos) return "text-slate-400";
+  if (pos.includes("SUPERIOR")) return "text-rose-400";
+  if (pos.includes("INFERIOR")) return "text-emerald-400";
+  return "text-yellow-500";
+}
 
+function macdColor(cross?: string) {
+  if (!cross) return "text-slate-400";
+  if (cross.includes("ALTA") || cross.includes("BULL")) return "text-emerald-400";
+  if (cross.includes("BAIXA") || cross.includes("BEAR")) return "text-rose-400";
+  return "text-white";
+}
+
+function SearchResult({ stock }: { stock: StockAnalysis }) {
   const parsed = parseAnalysis(stock.ai_analysis);
-  const isNeutral = parsed.verdict.includes("NEUTRO");
-  const isBuy = parsed.verdict.includes("COMPRA");
+  const isBuy = parsed.verdict.includes("COMPRA") || parsed.verdict.includes("LONG");
+  const isSell = parsed.verdict.includes("VENDA") || parsed.verdict.includes("SHORT");
   const d1 = stock.indicators_1d;
-  
+
+  const auditColor = isBuy
+    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+    : isSell
+    ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+    : "bg-amber-500/20 border-amber-500/40 text-amber-400";
+  const dotColor = isBuy ? "bg-emerald-400 animate-pulse" : isSell ? "bg-rose-400" : "bg-amber-400";
+
   return (
     <div className="space-y-6">
       {/* Elite Horizontal Analysis Bar */}
       <div className="glass-dark rounded-3xl border border-white/10 overflow-hidden shadow-2xl bg-slate-900/40">
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch divide-y lg:divide-y-0 lg:divide-x divide-white/10">
-          
+
           {/* SECTION 1: ASSET & PRICE */}
-          <div className="lg:col-span-3 p-6 flex flex-col justify-center bg-slate-950/40">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="lg:col-span-4 p-4 flex flex-col justify-center bg-slate-950/40">
+            <div className="flex items-center gap-2 mb-1.5">
               <div className="text-[16px] font-black uppercase tracking-[0.2em] text-slate-200">{stock.symbol} ANALYSIS</div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-black border border-blue-500/30">PRO</span>
             </div>
-            <div className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-1">${fmtPrice(stock.price)}</div>
+            <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(stock.price)}</div>
             {stock.preMarketPrice && (
-              <div className={`text-[11px] font-bold tracking-wide mb-1 ${(stock.preMarketChange ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <div className={`text-[9px] font-bold tracking-wide mb-0.5 ${(stock.preMarketChange ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 Pré-Market: ${fmtPrice(stock.preMarketPrice)} {(stock.preMarketChange ?? 0) >= 0 ? '▲' : '▼'} {Math.abs(stock.preMarketChangePercent ?? 0).toFixed(2)}%
               </div>
             )}
-            <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest ${isBullish ? 'text-emerald-400' : 'text-rose-400'}`}>
-              Trend: {stock.trend}
+            <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest w-fit ${auditColor}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+              IA AUDIT: {parsed.verdict}
             </div>
           </div>
 
-          {/* SECTION 2: VERDICT & SETUP */}
-          <div className="lg:col-span-6 p-6 grid grid-cols-2 gap-y-3 gap-x-8 items-center bg-slate-950/20">
-            <div className="col-span-2 flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-ping ${isBuy ? 'bg-emerald-400' : isNeutral ? 'bg-amber-400' : 'bg-rose-400'}`} />
-                <span className={`text-[12px] font-black uppercase tracking-[0.2em] ${isBuy ? 'text-emerald-400' : isNeutral ? 'text-amber-400' : 'text-rose-400'}`}>
-                  {parsed.verdict} • {parsed.score}
-                </span>
-              </div>
-            </div>
-
+          {/* SECTION 2: TRADE SETUP */}
+          <div className="lg:col-span-5 p-4 grid grid-cols-2 gap-y-2 gap-x-6 items-center border-r border-white/10 bg-slate-950/20">
             {parsed.setup ? (
               <>
+                <div className="col-span-2 flex items-center gap-2 mb-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isBuy ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />
+                  <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isBuy ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {isBuy ? 'COMPRA' : 'VENDA'} • {parsed.score}
+                  </span>
+                </div>
                 <div>
-                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Entrada</div>
+                  <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Entrada</div>
                   <div className="text-xl md:text-2xl font-mono font-black text-white">{parsed.setup.entrada}</div>
                 </div>
                 <div>
-                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Target</div>
+                  <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Target</div>
                   <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">{parsed.setup.target}</div>
                 </div>
                 <div>
-                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">Stop</div>
+                  <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Stop</div>
                   <div className="text-xl md:text-2xl font-mono font-black text-rose-400">{parsed.setup.stop}</div>
                 </div>
                 <div>
-                  <div className="text-[12px] font-black text-white/50 uppercase tracking-widest mb-1">R/R</div>
+                  <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">R/R</div>
                   <div className="text-xl md:text-2xl font-black text-blue-400">{parsed.setup.rr}</div>
                 </div>
               </>
             ) : (
-              <div className="col-span-2 text-center text-slate-500 text-[11px] font-bold uppercase tracking-widest italic py-4">
-                {parsed.tecnico || "Aguardando confirmação de setup..."}
+              <div className="col-span-2 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest italic py-4">
+                {parsed.tecnico || "Aguardando setup de elite..."}
               </div>
             )}
           </div>
 
-          {/* SECTION 3: QUICK INDICATORS (RSI) */}
-          <div className="lg:col-span-3 p-6 flex flex-col justify-center items-center bg-slate-950/40 gap-1">
-            <span className="text-[14px] font-black text-white/50 uppercase tracking-widest">RSI DIÁRIO</span>
-            <span className={`text-5xl md:text-6xl font-black font-mono tracking-tighter ${rsiColor(stock.rsi)}`}>
-              {stock.rsi.toFixed(1)}
-            </span>
+          {/* SECTION 3: RSI + ADX */}
+          <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
+            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+              <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI</span>
+              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(stock.rsi)}`}>
+                {stock.rsi.toFixed(1)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
+              <span className="text-[12px] font-black text-white uppercase tracking-widest">ADX</span>
+              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${adxColor(d1?.adx)}`}>
+                {d1?.adx?.toFixed(1) ?? "—"}
+              </span>
+            </div>
           </div>
 
         </div>
       </div>
 
-      {/* INDICATORS GRID (Crypto Style) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCell label="Tendência EMA" value={d1?.ema_position ?? "—"} valueClass={emaColor(d1?.ema_position)} />
-        <StatCell label="RSI" value={stock.rsi.toFixed(1)} valueClass={rsiColor(stock.rsi)} />
-        <StatCell label="ADX" value={d1?.adx?.toFixed(1) ?? "—"} valueClass={adxColor(d1?.adx)} />
-        <StatCell label="Bollinger" value={d1?.bb_position ?? "—"} valueClass={d1?.bb_position?.includes("INFERIOR") ? "text-emerald-400" : d1?.bb_position?.includes("SUPERIOR") ? "text-rose-400" : "text-yellow-400"} />
-        <StatCell label="MACD" value={d1?.macd_cross ?? "—"} valueClass={d1?.macd_cross?.includes("BULL") || d1?.macd_cross?.includes("ALTA") ? "text-emerald-400" : "text-rose-400"} />
-        <StatCell label="ATR" value={`$${fmtPrice(d1?.atr ?? 0)}`} />
-        {stock.supports && stock.supports.length > 0 && (
-           <StatCell label="Suporte S1" value={`$${fmtPrice(stock.supports[0])}`} valueClass="text-emerald-400" />
-        )}
-        {stock.resistances && stock.resistances.length > 0 && (
-           <StatCell label="Resistência R1" value={`$${fmtPrice(stock.resistances[0])}`} valueClass="text-rose-400" />
-        )}
-        <StatCell label="Last Update" value={new Date(stock.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
-      </div>
+      {/* TABS — igual ao layout das cryptos */}
+      <Tabs defaultValue="1d" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+          <TabsTrigger value="1d" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
+            ESTRATÉGICO (1D)
+          </TabsTrigger>
+          <TabsTrigger value="levels" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
+            NÍVEIS S/R
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-amber-400 data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
+            IA ANÁLISE
+          </TabsTrigger>
+        </TabsList>
 
-      {/* AI Analysis */}
-      <div className="glass-dark rounded-3xl border border-blue-500/20 p-8 shadow-xl bg-slate-900/40 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50" />
-        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-           <div className="w-2 h-2 rounded-full bg-blue-400 glow-blue animate-pulse" />
-           AI QUANTITATIVE ANALYSIS — CLAUDE
-        </h3>
-        <div className="space-y-4">
-          {stock.ai_analysis.split('\n').filter(Boolean).map((line, i) => (
-            <div key={i} className="text-[16px] text-slate-100 font-medium leading-relaxed px-6 py-5 rounded-2xl bg-slate-950/60 border border-white/5 shadow-md">
-              {stripHtml(line)}
+        <TabsContent value="1d" className="mt-6 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatCell label="Tendência EMA" value={d1?.ema_position ?? "—"} valueClass={emaColor(d1?.ema_position)} />
+            <StatCell label="RSI" value={stock.rsi.toFixed(1)} valueClass={rsiColor(stock.rsi)} />
+            <StatCell label="ADX" value={d1?.adx?.toFixed(1) ?? "—"} valueClass={adxColor(d1?.adx)} />
+            <StatCell label="DI+" value={d1?.plus_di?.toFixed(1) ?? "—"} valueClass="text-emerald-400" />
+            <StatCell label="DI-" value={d1?.minus_di?.toFixed(1) ?? "—"} valueClass="text-rose-400" />
+            <StatCell label="Bollinger" value={d1?.bb_position ?? "—"} valueClass={bbColor(d1?.bb_position)} />
+            <StatCell label="MACD" value={d1?.macd_cross ?? "—"} valueClass={macdColor(d1?.macd_cross)} />
+            <StatCell label="ATR" value={d1?.atr ? `$${fmtPrice(d1.atr)}` : "—"} />
+            <StatCell label="Score" value={parsed.score} valueClass="text-blue-400" />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="levels" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Critical Support Levels
+              </h3>
+              <div className="space-y-3">
+                {(stock.supports ?? []).slice(0, 3).map((s, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
+                      <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-widest">Support {i + 1}</span>
+                    </div>
+                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(s)}</span>
+                  </div>
+                ))}
+                {(stock.supports ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem suportes disponíveis</p>}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                Critical Resistance Levels
+              </h3>
+              <div className="space-y-3">
+                {(stock.resistances ?? []).slice(0, 3).map((r, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
+                      <span className="text-xs md:text-sm font-black text-rose-400 uppercase tracking-widest">Resistance {i + 1}</span>
+                    </div>
+                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(r)}</span>
+                  </div>
+                ))}
+                {(stock.resistances ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem resistências disponíveis</p>}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai" className="mt-6">
+          <div className="glass-dark rounded-2xl border border-blue-500/20 p-4 shadow-lg relative overflow-hidden">
+            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              AI QUANTITATIVE ANALYSIS — CLAUDE
+            </h3>
+            <div className="space-y-3">
+              {stock.ai_analysis.split('\n').filter(Boolean).map((line, i) => (
+                <div key={i} className="text-sm font-medium leading-relaxed px-4 py-3 rounded-xl bg-slate-900/60 border border-white/5 text-slate-200">
+                  {stripHtml(line)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <a
         href={`https://finance.yahoo.com/quote/${stock.symbol}`}
