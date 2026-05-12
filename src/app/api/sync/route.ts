@@ -342,8 +342,8 @@ export async function GET(request: Request) {
               macd_cross: macd.cross,
               adx: adxData.adx,
               adx_label: adxData.adx > 25 ? 'FORTE' : adxData.adx > 20 ? 'FRACO' : 'SIDEWAYS',
-              plus_di: adxData.plusDI,
-              minus_di: adxData.minusDI,
+              plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
+              minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
               vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL",
               wt1: macd.aboveZero ? 10 : -10,
               wt_dir: emaPos.includes("BULLISH") ? "UPWARD" : "DOWNWARD",
@@ -431,10 +431,12 @@ export async function GET(request: Request) {
               const volume_ratio=Math.round((vol20>0?vols[vols.length-1]/vol20:1)*10)/10;
               return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
             };
-            const [r1h, r15m] = await Promise.all([
+            const [r1d, r1h, r15m] = await Promise.all([
+              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 0 } }),
               fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } }),
               fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 0 } })
             ]);
+            if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
             if (r1h.ok)  { const j=await r1h.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(j.Data.Data); }
             if (r15m.ok) { const j=await r15m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(j.Data.Data); }
           } catch(_e) {}
@@ -452,28 +454,29 @@ export async function GET(request: Request) {
         }
       }
 
-      // Prioritize chart data from the bot payload
-      let history = (symbolData.history as unknown[]) || [];
-
-      if (history.length < 1400) {
-        try {
-          const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
-          const cleanBase = cleanSymbol.replace('USDT', '');
-          const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1500&aggregate=4`, { next: { revalidate: 0 } });
-          if (res.ok) {
-            const json = await res.json();
-            if (json.Response === "Success" && json.Data?.Data) {
-              history = json.Data.Data.map((d: Record<string, unknown>) => ({
-                time: d.time,
-                open: d.open,
-                high: d.high,
-                low: d.low,
-                close: d.close
-              }));
-            }
+      // Chart history: always fetch daily candles (1 year) for better visual context.
+      // histohour+aggregate=4 is capped at 2000 hourly points = only 83 days.
+      // histoday gives full 365 daily candles regardless of bot cache size.
+      let history: unknown[] = [];
+      try {
+        const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
+        const cleanBase = cleanSymbol.replace('USDT', '');
+        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=365`, { next: { revalidate: 0 } });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.Response === "Success" && json.Data?.Data) {
+            history = json.Data.Data.map((d: Record<string, unknown>) => ({
+              time: d.time,
+              open: d.open,
+              high: d.high,
+              low: d.low,
+              close: d.close
+            }));
           }
-        } catch(_e) {}
-      }
+        }
+      } catch(_e) {}
+      // Fallback to bot cache if daily fetch failed
+      if (history.length === 0) history = (symbolData.history as unknown[]) || [];
 
       const cleanBase = (((symbolData.symbol as string) || selectedSymbol)).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
 

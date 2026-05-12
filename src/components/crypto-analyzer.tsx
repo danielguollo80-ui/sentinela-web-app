@@ -405,6 +405,11 @@ export function CryptoAnalyzer() {
                 <StatCell label="MACD" value={d1.macd_cross ?? "—"} valueClass={macdColor(d1.macd_cross)} />
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
                 <StatCell label="ATR" value={`$${fmtPrice(d1.atr, 2)}`} />
+                <StatCell
+                  label="Volume 1D"
+                  value={d1.volume_ratio != null ? `${d1.volume_ratio.toFixed(2)}x` : "—"}
+                  valueClass={(d1.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d1.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
+                />
               </div>
             </TabsContent>
             <TabsContent value="4h" className="mt-6 space-y-4">
@@ -420,6 +425,11 @@ export function CryptoAnalyzer() {
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
                 <StatCell label="Divergência" value={d4.divergence ?? "NEUTRO"} valueClass={d4.divergence?.includes("BULLISH") ? "text-emerald-400" : d4.divergence?.includes("BEARISH") ? "text-rose-400" : "text-slate-400"} />
                 <StatCell label="Volatilidade" value={d4.bb_width_label ?? "—"} valueClass={d4.bb_width_label === "SQUEEZE" ? "text-amber-400 animate-pulse" : "text-blue-400"} />
+                <StatCell
+                  label="Volume 4H"
+                  value={d4.volume_ratio != null ? `${d4.volume_ratio.toFixed(2)}x` : "—"}
+                  valueClass={(d4.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d4.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
+                />
               </div>
             </TabsContent>
             <TabsContent value="scalp" className="mt-6 space-y-5">
