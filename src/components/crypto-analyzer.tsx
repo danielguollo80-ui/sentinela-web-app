@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -201,18 +201,37 @@ export function CryptoAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  const analyze = useCallback(async (sym: string) => {
+  const activeSymbol = useRef<string>("");
+
+  const analyze = useCallback(async (sym: string, silent = false) => {
     const s = sym.trim().toUpperCase().replace("USDT", "").replace("/", "");
     if (!s) return;
-    setLoading(true); setError(null); setResult(null);
+    activeSymbol.current = s;
+    if (!silent) { setLoading(true); setError(null); setResult(null); }
     try {
-      const res = await fetch(`${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`);
+      const url = silent
+        ? `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&noai=1`
+        : `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
-      setResult(data.analysis);
-    } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+      setResult(prev => silent
+        ? { ...(prev ?? data.analysis), ...data.analysis, ai_analysis: prev?.ai_analysis ?? data.analysis.ai_analysis }
+        : data.analysis
+      );
+      setLastRefresh(new Date());
+    } catch (e: any) { if (!silent) setError(e.message); } finally { if (!silent) setLoading(false); }
   }, []);
+
+  // Auto-refresh a cada 60s sem chamar IA (custo $0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (activeSymbol.current) analyze(activeSymbol.current, true);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [analyze]);
 
   if (!isMounted) return null;
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
@@ -225,10 +244,15 @@ export function CryptoAnalyzer() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <form onSubmit={(e) => { e.preventDefault(); analyze(query); }} className="flex gap-3 mb-8">
+      <form onSubmit={(e) => { e.preventDefault(); analyze(query); }} className="flex gap-3 mb-2">
         <Input placeholder="Ex: BTC, ETH..." value={query} onChange={(e) => setQuery(e.target.value)} className="bg-slate-950 border-white/10 text-white h-14 text-lg rounded-xl" />
         <Button type="submit" className="bg-blue-600 hover:bg-blue-500 px-8 h-14 text-lg font-bold rounded-xl text-white">ANALISAR</Button>
       </form>
+      {lastRefresh && (
+        <p className="text-[11px] text-slate-500 text-right mb-6">
+          ↻ atualizado às {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+        </p>
+      )}
 
       {/* Quick Shortcuts */}
       <div className="space-y-4 mb-10">

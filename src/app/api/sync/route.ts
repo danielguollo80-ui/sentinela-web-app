@@ -18,12 +18,26 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    
+
     const url = process.env.REDIS_URL || '';
     const kv = url ? new Redis(url) : null;
 
     if (kv) {
-      await kv.set(`sentinela:${botType}`, JSON.stringify(data));
+      const key = `sentinela:${botType}`;
+      // Crypto: o day-trade envia só símbolos com scalp — faz merge para não apagar o resto do painel
+      if (botType === 'crypto' && data && typeof data === 'object' && !Array.isArray(data)) {
+        let merged: Record<string, unknown> = {};
+        try {
+          const prev = await kv.get(key);
+          if (prev) merged = JSON.parse(prev) as Record<string, unknown>;
+        } catch {
+          merged = {};
+        }
+        merged = { ...merged, ...(data as Record<string, unknown>) };
+        await kv.set(key, JSON.stringify(merged));
+      } else {
+        await kv.set(key, JSON.stringify(data));
+      }
       await kv.quit();
     }
 
@@ -39,16 +53,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
     const botType = searchParams.get('bot') || 'crypto';
+    const noAI = searchParams.get('noai') === '1';
 
     const url = process.env.REDIS_URL || '';
     const kv = url ? new Redis(url) : null;
 
     let fullData: Record<string, unknown> | null = null;
 
-    // Local files take priority when running on the same machine as the bots
+    // Monorepo: sentinela-web-app em scratch/sentinela-web-app → raiz = ..
+    const scratchRoot = path.resolve(process.cwd(), '..');
+
+    // Ficheiros JSON escritos pelos bots (prioridade em dev no mesmo PC)
     const LOCAL_PATHS: Record<string, string> = {
-      football: path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Futebol', 'latest_results_football.json'),
-      stocks:   path.join('C:', 'Users', 'Gabriel', '.gemini', 'antigravity', 'scratch', 'Bot-Acoes', 'latest_results_stocks.json'),
+      football: path.join(scratchRoot, 'bots', 'Bot-Futebol', 'latest_results_football.json'),
+      stocks: path.join(scratchRoot, 'bots', 'Bot-Acoes', 'latest_results_stocks.json'),
     };
     if (botType in LOCAL_PATHS && fs.existsSync(LOCAL_PATHS[botType])) {
       try {
@@ -69,11 +87,25 @@ export async function GET(request: Request) {
     }
     if (kv) { try { await kv.quit(); } catch (_e) {} }
 
-    // Crypto local fallback
+    // Crypto: cache multi-moeda gerado pelo Bot-Bitcoin (mesmo formato que POST Redis)
     if (!fullData && botType === 'crypto') {
+      const cryptoLatest = path.join(scratchRoot, 'bots', 'Bot-Bitcoin', 'latest_results_crypto.json');
+      if (fs.existsSync(cryptoLatest)) {
+        try {
+          fullData = JSON.parse(fs.readFileSync(cryptoLatest, 'utf8'));
+        } catch {
+          fullData = null;
+        }
+      }
       const DATA_DIR = path.join(process.cwd(), 'data');
       const SYNC_FILE = path.join(DATA_DIR, 'bot_sync.json');
-      if (fs.existsSync(SYNC_FILE)) fullData = JSON.parse(fs.readFileSync(SYNC_FILE, 'utf8'));
+      if (!fullData && fs.existsSync(SYNC_FILE)) {
+        try {
+          fullData = JSON.parse(fs.readFileSync(SYNC_FILE, 'utf8'));
+        } catch {
+          fullData = null;
+        }
+      }
     }
 
     // Stocks real-time fallback (runs before fullData null check)
@@ -169,8 +201,8 @@ export async function GET(request: Request) {
         // Pré-market em paralelo
         const pm = await fetchPreMarket(sym);
         if (pm) Object.assign(realtimeData, pm);
-        // AI Analysis
-        try {
+        // AI Analysis (skipped on auto-refresh)
+        if (!noAI) { try {
           const Anthropic = (await import('@anthropic-ai/sdk')).default;
           const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
           const msg = await anthropic.messages.create({
@@ -184,7 +216,7 @@ export async function GET(request: Request) {
           if (msg.content[0].type === 'text') realtimeData.ai_analysis = msg.content[0].text;
         } catch (_aiErr) {
           realtimeData.ai_analysis = `SYMBOL: ${sym}\nVEREDITO: ${trend === 'Bullish' ? '🟢 COMPRA' : '🔴 VENDA'}\nSCORE: N/A\nTÉCNICO: RSI ${rsi.toFixed(2)} | ${emaPos}\nSETUP: N/A\nRISCO: Análise IA indisponível`;
-        }
+        } }
         return NextResponse.json({ analysis: realtimeData });
       } catch (err) {
         console.error('Stocks real-time error:', err);
@@ -359,8 +391,8 @@ export async function GET(request: Request) {
             ai_analysis: `[Fonte: ${source}] Analisando tendências para ${selectedSymbol}...`
           };
 
-          // AI ANALYSIS
-          try {
+          // AI ANALYSIS (skipped on auto-refresh)
+          if (!noAI) { try {
             const Anthropic = (await import('@anthropic-ai/sdk')).default;
             const anthropic = new Anthropic({
               apiKey: process.env.ANTHROPIC_API_KEY
@@ -391,7 +423,7 @@ export async function GET(request: Request) {
             }
           } catch (_aiErr) {
             realTimeData.ai_analysis = `[Fonte: ${source}] Análise concluída. RSI: ${rsi.toFixed(2)}. Tendência: ${emaPos}. POC: $${poc.toFixed(6)}.`;
-          }
+          } }
           // Fetch 1H + 15M para aba SCALP (fallback path)
           try {
             type Candle = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
