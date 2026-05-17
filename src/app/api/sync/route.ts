@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
