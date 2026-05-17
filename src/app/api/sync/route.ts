@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 export async function POST(request: Request) {
   try {
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
       const fetchPreMarket = async (ticker: string) => {
         try {
           const h = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
-          const r = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&fields=preMarketPrice,preMarketChange,preMarketChangePercent`, { headers: h, next: { revalidate: 0 } });
+          const r = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&fields=preMarketPrice,preMarketChange,preMarketChangePercent`, { headers: h, next: { revalidate: 60 } });
           if (!r.ok) return null;
           const j = await r.json();
           const q = j?.quoteResponse?.result?.[0];
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
         };
         const yahooRes = await fetch(
           `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y`,
-          { headers, next: { revalidate: 0 } }
+          { headers, next: { revalidate: 60 } }
         );
         if (!yahooRes.ok) {
           return NextResponse.json({ error: `Ação "${sym}" não encontrada.` }, { status: 404 });
@@ -270,7 +270,7 @@ export async function GET(request: Request) {
 
           // 1. TRY BYBIT LINEAR (Futures)
           try {
-            const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 0 } });
+            const res = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 60 } });
             if (res.ok) {
               const json = await res.json();
               if (json.retCode === 0 && json.result?.list?.length > 0) {
@@ -283,7 +283,7 @@ export async function GET(request: Request) {
           // 2. TRY BYBIT SPOT (Fallback for smaller coins)
           if (klines.length === 0) {
             try {
-              const res = await fetch(`https://api.bytick.com/v5/market/kline?category=spot&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 0 } });
+              const res = await fetch(`https://api.bytick.com/v5/market/kline?category=spot&symbol=${pair}&interval=${interval}&limit=500`, { headers, next: { revalidate: 60 } });
               if (res.ok) {
                 const json = await res.json();
                 if (json.retCode === 0 && json.result?.list?.length > 0) {
@@ -298,7 +298,7 @@ export async function GET(request: Request) {
           if (klines.length === 0) {
             try {
               const ccBase = cleanBase.replace('USDT', '');
-              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=1000&aggregate=4`, { headers, next: { revalidate: 0 } });
+              const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${ccBase}&tsym=USDT&limit=1000&aggregate=4`, { headers, next: { revalidate: 300 } });
               if (res.ok) {
                 const json = await res.json();
                 if (json.Response === "Success" && json.Data?.Data?.length > 0) {
@@ -464,9 +464,9 @@ export async function GET(request: Request) {
               return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
             };
             const [r1d, r1h, r15m] = await Promise.all([
-              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 0 } }),
-              fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } }),
-              fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 0 } })
+              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } }),
+              fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } }),
+              fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 60 } })
             ]);
             if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
             if (r1h.ok)  { const j=await r1h.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(j.Data.Data); }
@@ -491,7 +491,7 @@ export async function GET(request: Request) {
       try {
         const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
         const cleanBase = cleanSymbol.replace('USDT', '');
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1000&aggregate=4`, { next: { revalidate: 0 } });
+        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1000&aggregate=4`, { next: { revalidate: 300 } });
         if (res.ok) {
           const json = await res.json();
           if (json.Response === "Success" && json.Data?.Data) {
@@ -512,7 +512,7 @@ export async function GET(request: Request) {
 
       // Live Price Override for Cached Symbols
       try {
-        const priceRes = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cleanBase}&tsyms=USDT`, { next: { revalidate: 0 } });
+        const priceRes = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cleanBase}&tsyms=USDT`, { next: { revalidate: 30 } });
         if (priceRes.ok) {
           const priceData = await priceRes.json();
           if (priceData.USDT) symbolData.price = parseFloat(priceData.USDT);
@@ -565,8 +565,8 @@ export async function GET(request: Request) {
           return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
         };
         const [r1h, r15m] = await Promise.all([
-          fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 0 } }),
-          fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 0 } })
+          fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } }),
+          fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 60 } })
         ]);
         if (r1h.ok)  { const j=await r1h.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_1h  = calcDT(j.Data.Data); }
         if (r15m.ok) { const j=await r15m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_15m = calcDT(j.Data.Data); }
