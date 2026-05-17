@@ -88,7 +88,7 @@ export const SentinelaChart = forwardRef<SentinelaChartHandle, SentinelaChartPro
       handleResize();
       // Aplica o range após o resize para não ser sobrescrito
       if (data.length > 0) {
-        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, data.length - 250), to: data.length });
+        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, data.length - 120), to: data.length });
       }
     });
     const resizeObserver = new ResizeObserver(handleResize);

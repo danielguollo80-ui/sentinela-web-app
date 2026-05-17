@@ -486,14 +486,12 @@ export async function GET(request: Request) {
         }
       }
 
-      // Chart history: always fetch daily candles (1 year) for better visual context.
-      // histohour+aggregate=4 is capped at 2000 hourly points = only 83 days.
-      // histoday gives full 365 daily candles regardless of bot cache size.
+      // Chart history: fetch 4H candles (limit=1000 → ~167 days of granular history).
       let history: unknown[] = [];
       try {
         const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
         const cleanBase = cleanSymbol.replace('USDT', '');
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=365`, { next: { revalidate: 0 } });
+        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=1000&aggregate=4`, { next: { revalidate: 0 } });
         if (res.ok) {
           const json = await res.json();
           if (json.Response === "Success" && json.Data?.Data) {
