@@ -374,16 +374,16 @@ export function CryptoAnalyzer() {
               <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
                   <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI</span>
-                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d.rsi)}`}>
-                    {fmtNum(result.indicators_1d.rsi)}
+                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d?.rsi)}`}>
+                    {fmtNum(result.indicators_1d?.rsi)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
                   <span className="text-[12px] font-black text-white uppercase tracking-widest">WT</span>
                   <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${
-                    (result.indicators_4h.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
+                    (result.indicators_4h?.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
-                    {fmtNum(result.indicators_4h.wt1)}
+                    {fmtNum(result.indicators_4h?.wt1)}
                   </span>
                 </div>
               </div>
