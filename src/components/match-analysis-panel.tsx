@@ -20,6 +20,7 @@ interface MatchAnalysisPanelProps {
 }
 
 export const MatchAnalysisPanel: React.FC<MatchAnalysisPanelProps> = ({ match, time, factors }) => {
+  if (!match) return null;
   const teams = match.split(' vs ');
   const team1 = teams[0] || "Time 1";
   const team2 = teams[1] || "Time 2";

@@ -54,6 +54,7 @@ export async function GET(request: Request) {
     const symbol = searchParams.get('symbol');
     const botType = searchParams.get('bot') || 'crypto';
     const noAI = searchParams.get('noai') === '1';
+    const liveRequested = searchParams.get('live') === '1';
 
     const url = process.env.REDIS_URL || '';
     const kv = url ? new Redis(url) : null;
@@ -249,8 +250,8 @@ export async function GET(request: Request) {
       const selectedSymbol = resolveSymbol(symbol);
       const symbolData = fullData[selectedSymbol] as Record<string, unknown>;
 
-      if (!symbolData) {
-        // MULTI-EXCHANGE REAL-TIME FALLBACK
+      if (!symbolData || liveRequested) {
+        // MULTI-EXCHANGE REAL-TIME FALLBACK — também usado quando live=1 (busca manual do usuário)
         try {
           const cleanSymbol = selectedSymbol.replace('/', '').replace(':USDT', '').toUpperCase();
           const pair = cleanSymbol.endsWith('USDT') ? cleanSymbol : cleanSymbol + 'USDT';

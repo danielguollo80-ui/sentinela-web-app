@@ -213,7 +213,7 @@ export function CryptoAnalyzer() {
     try {
       const url = silent
         ? `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&noai=1`
-        : `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}`;
+        : `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&live=1`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
