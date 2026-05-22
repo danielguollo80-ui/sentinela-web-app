@@ -225,11 +225,11 @@ export function CryptoAnalyzer() {
     } catch (e: any) { if (!silent) setError(e.message); } finally { if (!silent) setLoading(false); }
   }, []);
 
-  // Auto-refresh a cada 60s sem chamar IA (custo $0)
+  // Auto-refresh a cada 5 min sem chamar IA (reduz Fast Origin Transfer Vercel)
   useEffect(() => {
     const id = setInterval(() => {
       if (activeSymbol.current) analyze(activeSymbol.current, true);
-    }, 60_000);
+    }, 300_000);
     return () => clearInterval(id);
   }, [analyze]);
 

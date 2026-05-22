@@ -492,7 +492,7 @@ export async function GET(request: Request) {
       try {
         const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
         const cleanBase = cleanSymbol.replace('USDT', '');
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=300&aggregate=4`, { next: { revalidate: 300 } });
+        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=4`, { next: { revalidate: 300 } });
         if (res.ok) {
           const json = await res.json();
           if (json.Response === "Success" && json.Data?.Data) {
