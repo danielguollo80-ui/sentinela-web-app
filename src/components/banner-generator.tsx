@@ -212,31 +212,30 @@ export const BannerGenerator = () => {
         if (!res.ok) throw new Error('Falha ao buscar dados do Redis');
         const json = await res.json();
         
-        const allSyms = DEFAULT_SYMBOLS.filter(s => json.allMatches?.includes(s));
-        if (allSyms.length > 0) {
-            setAvailableSymbols(allSyms);
-        } else {
-            setAvailableSymbols(DEFAULT_SYMBOLS);
-        }
+        setAvailableSymbols(DEFAULT_SYMBOLS);
 
         const botData = json.match;
         if (botData) {
           const ind4h = botData['indicators_4h'] || botData['4h'] || {};
           const fmt = (v: number | undefined) => v ? v.toLocaleString('en-US') : '---';
+          // supports/resistances podem vir como arrays (live fallback) ou como campos nomeados (bot cache)
+          const supArr  = Array.isArray(botData.supports)    ? botData.supports    : [];
+          const resArr  = Array.isArray(botData.resistances) ? botData.resistances : [];
           setCryptoData({
             symbol: botData.symbol || sym,
             price: (botData.price || 0).toLocaleString('en-US'),
             rsi: parseFloat((ind4h.rsi || 50).toFixed(1)),
             wt: parseFloat((ind4h.wt1 || 0).toFixed(1)),
             trend: (botData.confluence_label || ind4h.wt_dir || "Neutral") + " (1H/4H)",
-            s_1h: fmt(botData.s_1h),
-            r_1h: fmt(botData.r_1h),
-            s_4h: fmt(botData.s_4h),
-            r_4h: fmt(botData.r_4h),
+            s_1h: fmt(botData.s_1h ?? supArr[0]),
+            r_1h: fmt(botData.r_1h ?? resArr[0]),
+            s_4h: fmt(botData.s_4h ?? supArr[1]),
+            r_4h: fmt(botData.r_4h ?? resArr[1]),
             verdict: botData.ai_analysis || botData.rev_type || botData.confluence_label || "Sem análise disponível.",
             setup: botData.setup
           });
-          if (botData.symbol || sym) setSelectedSymbol(botData.symbol || sym);
+          // Usa sempre sym (seleção do usuário) para manter o dropdown correto
+          if (sym) setSelectedSymbol(sym);
         }
 
         // Usa o histórico do gráfico que já vem da nossa API

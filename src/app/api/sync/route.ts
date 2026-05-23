@@ -236,12 +236,15 @@ export async function GET(request: Request) {
     }
 
     if (botType === 'crypto') {
-      // Suporta ambos os formatos: "BTC" e "BTC/USDT"
+      // Suporta ambos os formatos: "BTC", "BTC/USDT", "BTC/USDT:USDT" (Binance Futures)
       const resolveSymbol = (sym: string | null): string => {
         if (!sym) return Object.keys(fullData)[0] || "BTC/USDT";
         if (fullData[sym]) return sym;
         const withUsdt = sym.includes('/') ? sym : `${sym}/USDT`;
         if (fullData[withUsdt]) return withUsdt;
+        // Formato Binance Futures: "AVAX/USDT:USDT"
+        const withColon = withUsdt.includes(':') ? withUsdt : `${withUsdt}:USDT`;
+        if (fullData[withColon]) return withColon;
         const short = sym.split('/')[0].toUpperCase();
         if (fullData[short]) return short;
         // Se não achou no cache, retorna o próprio símbolo para tentar o Live Fallback
@@ -360,6 +363,10 @@ export async function GET(request: Request) {
             symbol: selectedSymbol,
             price: price,
             poc: poc,
+            s_1h: s1,
+            r_1h: r1,
+            s_4h: s2,
+            r_4h: r2,
             supports: [s1, s2, s3].sort((a, b) => b - a), // Descending
             resistances: [r1, r2, r3].sort((a, b) => a - b), // Ascending
             indicators_1d: {
@@ -464,15 +471,36 @@ export async function GET(request: Request) {
               const volume_ratio=Math.round((vol20>0?vols[vols.length-1]/vol20:1)*10)/10;
               return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
             };
-            const [r1d, r1h, r15m] = await Promise.all([
-              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } }),
-              fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } }),
-              fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 60 } })
+            // Converte klines Bybit (desc) → Candle[] (asc) para calcDT
+            const bybitToCandles = (list: unknown[][]) =>
+              [...list].reverse().map(k => ({
+                time: parseInt(k[0] as string), open: parseFloat(k[1] as string),
+                high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
+                close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
+              }));
+            // 1H e 15M via Bybit (sem rate limit); 1D via CryptoCompare (cache 1h)
+            const [b1h, b15m, r1d] = await Promise.all([
+              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=200`,  { headers, next: { revalidate: 120 } }),
+              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=15&limit=200`,  { headers, next: { revalidate: 60 } }),
+              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } })
             ]);
+            if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
+            if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(bybitToCandles(j.result.list)); }
             if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
-            if (r1h.ok)  { const j=await r1h.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(j.Data.Data); }
-            if (r15m.ok) { const j=await r15m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(j.Data.Data); }
           } catch(_e) {}
+
+          // Injeta dados do bot do cache se disponível (live=1 forçou fallback mas símbolo existe no Redis)
+          if (symbolData) {
+            // Sempre sobrescreve: setup, veredito e labels do bot
+            const alwaysInject = ['setup', 'veredito', 'rev_type', 'confluence_label', 'scalper_score', 'scalper_label'];
+            for (const k of alwaysInject) {
+              if (symbolData[k] != null) (realTimeData as Record<string, unknown>)[k] = symbolData[k];
+            }
+            // Fallback: injeta 1H/15M do bot apenas se o CryptoCompare falhou (rate limit, etc.)
+            const rt = realTimeData as Record<string, unknown>;
+            if (rt.indicators_1h == null && symbolData.indicators_1h != null)   rt.indicators_1h  = symbolData.indicators_1h;
+            if (rt.indicators_15m == null && symbolData.indicators_15m != null) rt.indicators_15m = symbolData.indicators_15m;
+          }
 
           return NextResponse.json({
             analysis: realTimeData,
@@ -492,7 +520,7 @@ export async function GET(request: Request) {
       try {
         const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
         const cleanBase = cleanSymbol.replace('USDT', '');
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=4`, { next: { revalidate: 300 } });
+        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=540&aggregate=4`, { next: { revalidate: 300 } });
         if (res.ok) {
           const json = await res.json();
           if (json.Response === "Success" && json.Data?.Data) {
@@ -508,6 +536,19 @@ export async function GET(request: Request) {
       } catch(_e) {}
       // Fallback to bot cache if daily fetch failed
       if (history.length === 0) history = (symbolData.history as unknown[]) || [];
+
+      // Calcula S/R via pivot se o bot não enviou campos nomeados
+      if (!symbolData.s_1h && history.length >= 2) {
+        const hist = history as Array<{high: number; low: number; close: number}>;
+        const prevH = hist[hist.length - 2].high;
+        const prevL = hist[hist.length - 2].low;
+        const prevC = hist[hist.length - 2].close;
+        const pp = (prevH + prevL + prevC) / 3;
+        symbolData.r_1h = (2 * pp) - prevL;
+        symbolData.s_1h = (2 * pp) - prevH;
+        symbolData.r_4h = pp + (prevH - prevL);
+        symbolData.s_4h = pp - (prevH - prevL);
+      }
 
       const cleanBase = (((symbolData.symbol as string) || selectedSymbol)).replace('/', '').replace('USDT', '').replace(':USDT', '').toUpperCase();
 

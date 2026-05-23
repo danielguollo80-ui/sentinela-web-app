@@ -225,13 +225,7 @@ export function CryptoAnalyzer() {
     } catch (e: any) { if (!silent) setError(e.message); } finally { if (!silent) setLoading(false); }
   }, []);
 
-  // Auto-refresh a cada 5 min sem chamar IA (reduz Fast Origin Transfer Vercel)
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (activeSymbol.current) analyze(activeSymbol.current, true);
-    }, 300_000);
-    return () => clearInterval(id);
-  }, [analyze]);
+  // Auto-refresh desativado — dados são buscados ao vivo apenas quando o usuário clica/pesquisa
 
   if (!isMounted) return null;
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
