@@ -606,22 +606,21 @@ export async function GET(request: Request) {
           const volume_ratio = Math.round((vol20>0 ? vols[vols.length-1]/vol20 : 1)*10)/10;
           return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
         };
-        // Bybit (sem rate limit) como fonte primária; CryptoCompare como fallback
+        // Binance Futures (fapi) — mesma fonte do bot, sem rate limit no Vercel
         const pair = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
-        const hdrs = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
-        const bybitToCandles = (list: unknown[][]) =>
-          [...list].reverse().map(k => ({
+        const binanceToCandles = (list: unknown[][]) =>
+          list.map(k => ({
             time: parseInt(k[0] as string), open: parseFloat(k[1] as string),
             high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
             close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
           }));
-        const [b1h, b15m] = await Promise.all([
-          fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=200`,  { headers: hdrs, next: { revalidate: 120 } }),
-          fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=15&limit=200`,  { headers: hdrs, next: { revalidate: 60 } }),
+        const [f1h, f15m] = await Promise.all([
+          fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }),
+          fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=15m&limit=200`, { next: { revalidate: 60 } }),
         ]);
-        if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) symbolData.indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
-        if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) symbolData.indicators_15m = calcDT(bybitToCandles(j.result.list)); }
-        // Fallback CryptoCompare se Bybit não retornou dados (spot não listado em linear)
+        if (f1h.ok)  { const j=await f1h.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_1h  = calcDT(binanceToCandles(j)); }
+        if (f15m.ok) { const j=await f15m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_15m = calcDT(binanceToCandles(j)); }
+        // Fallback CryptoCompare se Binance não retornou (moeda não listada em futuros)
         if (!symbolData.indicators_1h) {
           const r1h = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } });
           if (r1h.ok) { const j=await r1h.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_1h = calcDT(j.Data.Data); }
