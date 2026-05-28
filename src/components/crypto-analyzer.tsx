@@ -325,9 +325,9 @@ export function CryptoAnalyzer() {
                 {result.setup && result.setup.tipo !== 'NEUTRO' ? (
                   <>
                     <div className="col-span-2 flex items-center gap-2 mb-0.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${result.setup.tipo === 'LONG' ? 'bg-emerald-400' : 'bg-rose-400'} ${result.veredito === "APROVADO" ? "animate-ping" : ""}`} />
-                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${result.setup.tipo === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {result.setup.tipo === 'LONG' ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
+                      <div className={`w-1.5 h-1.5 rounded-full ${(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'bg-emerald-400' : 'bg-rose-400'} ${result.veredito === "APROVADO" ? "animate-ping" : ""}`} />
+                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
                         {result.veredito !== "APROVADO" && " • SOB AUDITORIA"}
                       </span>
                     </div>

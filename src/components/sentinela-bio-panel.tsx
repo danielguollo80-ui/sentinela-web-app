@@ -30,7 +30,7 @@ export const SentinelaBioPanel: React.FC<SentinelaBioPanelProps> = ({
   symbol, price, rsi, wt, trend, s_1h, r_1h, s_4h, r_4h, verdict, setup
 }) => {
   const isSetup = setup && setup.tipo !== 'NEUTRO';
-  const isLong = setup?.tipo === 'LONG';
+  const isLong = setup?.tipo === 'LONG' || setup?.tipo === 'POSSIBLE_BOTTOM';
   const colorClass = isLong ? 'sentinela-emerald' : 'rose-500';
   const glowClass = isLong ? 'glow-emerald' : 'glow-rose';
 
