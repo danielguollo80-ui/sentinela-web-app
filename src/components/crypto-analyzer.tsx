@@ -205,6 +205,47 @@ export function CryptoAnalyzer() {
 
   const activeSymbol = useRef<string>("");
 
+  // Calcula RSI diretamente dos closes (sem dependências externas)
+  function calcRsi(closes: number[], period = 14): number | null {
+    if (closes.length < period + 1) return null;
+    let gains = 0, losses = 0;
+    for (let i = 1; i <= period; i++) {
+      const d = closes[i] - closes[i - 1];
+      if (d >= 0) gains += d; else losses -= d;
+    }
+    let ag = gains / period, al = losses / period;
+    for (let i = period + 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i - 1];
+      ag = (ag * (period - 1) + Math.max(d, 0)) / period;
+      al = (al * (period - 1) + Math.max(-d, 0)) / period;
+    }
+    if (al === 0) return 100;
+    return Math.round((100 - 100 / (1 + ag / al)) * 10) / 10;
+  }
+
+  // Fetch direto da Binance Futures — zero custo Vercel, chamado só quando bot não tem dados
+  async function fetchBinanceLive(symbol: string): Promise<Partial<{ indicators_1h: IndicatorData; indicators_15m: IndicatorData; price: number }>> {
+    const pair = `${symbol}USDT`;
+    const base = "https://fapi.binance.com/fapi/v1";
+    try {
+      const [k1h, k15m, ticker] = await Promise.all([
+        fetch(`${base}/klines?symbol=${pair}&interval=1h&limit=60`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=60`).then(r => r.json()),
+        fetch(`${base}/ticker/price?symbol=${pair}`).then(r => r.json()),
+      ]);
+      const closes1h  = Array.isArray(k1h)  ? k1h.map((c: any[])  => parseFloat(c[4])) : [];
+      const closes15m = Array.isArray(k15m) ? k15m.map((c: any[]) => parseFloat(c[4])) : [];
+      const vols1h    = Array.isArray(k1h)  ? k1h.map((c: any[])  => parseFloat(c[5])) : [];
+      const avgVol    = vols1h.length >= 20 ? vols1h.slice(-20).reduce((a, b) => a + b, 0) / 20 : 0;
+      const lastVol   = vols1h.at(-1) ?? 0;
+      return {
+        price: parseFloat(ticker?.price ?? "0"),
+        indicators_1h:  { rsi: calcRsi(closes1h)  ?? undefined, volume_ratio: avgVol > 0 ? Math.round((lastVol / avgVol) * 100) / 100 : undefined },
+        indicators_15m: { rsi: calcRsi(closes15m) ?? undefined },
+      };
+    } catch { return {}; }
+  }
+
   const analyze = useCallback(async (sym: string, silent = false) => {
     const s = sym.trim().toUpperCase().replace("USDT", "").replace("/", "");
     if (!s) return;
@@ -217,9 +258,24 @@ export function CryptoAnalyzer() {
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
+      let analysis = data.analysis;
+
+      // Se bot não tem dados 1H/15M para este símbolo, busca direto da Binance (zero custo Vercel)
+      const missing1h  = !analysis?.indicators_1h?.rsi;
+      const missing15m = !analysis?.indicators_15m?.rsi;
+      if (missing1h || missing15m) {
+        const live = await fetchBinanceLive(s);
+        analysis = {
+          ...analysis,
+          price: analysis?.price || live.price || 0,
+          indicators_1h:  missing1h  ? { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  } : analysis?.indicators_1h,
+          indicators_15m: missing15m ? { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m } : analysis?.indicators_15m,
+        };
+      }
+
       setResult(prev => silent
-        ? { ...(prev ?? data.analysis), ...data.analysis, ai_analysis: prev?.ai_analysis ?? data.analysis.ai_analysis }
-        : data.analysis
+        ? { ...(prev ?? analysis), ...analysis, ai_analysis: prev?.ai_analysis ?? analysis.ai_analysis }
+        : analysis
       );
       setLastRefresh(new Date());
     } catch (e: any) { if (!silent) setError(e.message); } finally { if (!silent) setLoading(false); }
