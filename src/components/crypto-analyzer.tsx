@@ -253,9 +253,10 @@ export function CryptoAnalyzer() {
     activeSymbol.current = s;
     if (!silent) { setLoading(true); setError(null); setResult(null); }
     try {
-      const url = silent
-        ? `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&noai=1`
-        : `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&live=1`;
+      // Usa sempre o caminho de cache + enriquecimento Binance (Path B): estável no Vercel e traz o 5M.
+      // O live=1 (multi-exchange via Bybit) falha no Vercel e às vezes retorna 404; para moeda fora do
+      // cache o backend já cai no fallback multi-exchange sozinho (quando symbolData não existe).
+      const url = `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&noai=1`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
