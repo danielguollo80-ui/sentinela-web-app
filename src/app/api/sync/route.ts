@@ -432,8 +432,8 @@ export async function GET(request: Request) {
           } catch (_aiErr) {
             realTimeData.ai_analysis = `[Fonte: ${source}] Análise concluída. RSI: ${rsi.toFixed(2)}. Tendência: ${emaPos}. POC: $${poc.toFixed(6)}.`;
           } }
-          // Fetch 1H + 15M para aba SCALP (fallback path)
-          try {
+          // Fetch 1H + 15M + 5M para aba SCALP — calcDT no escopo p/ reuso entre Bybit e fallback Binance
+          {
             type Candle = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
             const calcDT = (candles: Candle[]) => {
               if (candles.length < 30) return {};
@@ -478,38 +478,42 @@ export async function GET(request: Request) {
                 high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
                 close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
               }));
-            // 1H e 15M via Bybit (sem rate limit); 1D via CryptoCompare (cache 1h)
-            const [b1h, b15m, b5m, r1d] = await Promise.all([
-              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=200`,  { headers, next: { revalidate: 120 } }),
-              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=15&limit=200`,  { headers, next: { revalidate: 60 } }),
-              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=5&limit=200`,   { headers, next: { revalidate: 30 } }),
-              fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } })
-            ]);
-            if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
-            if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(bybitToCandles(j.result.list)); }
-            if (b5m.ok)  { const j=await b5m.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_5m  = calcDT(bybitToCandles(j.result.list)); }
-            if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
-
-            // Fallback Binance Futures p/ TFs de scalp — Bybit falha no Vercel às vezes; o 5M não tem
-            // fallback de cache (bot não calcula 5M), então sem isto ele fica vazio na aba SCALP.
-            const rt0 = realTimeData as Record<string, unknown>;
-            if (rt0.indicators_1h == null || rt0.indicators_15m == null || rt0.indicators_5m == null) {
-              const toC = (list: unknown[][]) => list.map(k => ({
-                time: parseInt(k[0] as string), open: parseFloat(k[1] as string),
-                high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
-                close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
-              }));
-              const fpair = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
-              const [g1h, g15m, g5m] = await Promise.all([
-                rt0.indicators_1h  == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }) : null,
-                rt0.indicators_15m == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=15m&limit=200`, { next: { revalidate: 60 } })  : null,
-                rt0.indicators_5m  == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=5m&limit=200`,  { next: { revalidate: 30 } })  : null,
+            // 1H/15M/5M via Bybit — try PRÓPRIO (a Bybit às vezes lança no Vercel)
+            try {
+              const [b1h, b15m, b5m, r1d] = await Promise.all([
+                fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=200`,  { headers, next: { revalidate: 120 } }),
+                fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=15&limit=200`,  { headers, next: { revalidate: 60 } }),
+                fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=5&limit=200`,   { headers, next: { revalidate: 30 } }),
+                fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } })
               ]);
-              if (g1h  && g1h.ok)  { const j=await g1h.json();  if (Array.isArray(j)&&j.length>=30) rt0.indicators_1h  = calcDT(toC(j)); }
-              if (g15m && g15m.ok) { const j=await g15m.json(); if (Array.isArray(j)&&j.length>=30) rt0.indicators_15m = calcDT(toC(j)); }
-              if (g5m  && g5m.ok)  { const j=await g5m.json();  if (Array.isArray(j)&&j.length>=30) rt0.indicators_5m  = calcDT(toC(j)); }
-            }
-          } catch(_e) {}
+              if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
+              if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(bybitToCandles(j.result.list)); }
+              if (b5m.ok)  { const j=await b5m.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_5m  = calcDT(bybitToCandles(j.result.list)); }
+              if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
+            } catch(_e) {}
+
+            // Fallback Binance Futures p/ TFs de scalp — try PRÓPRIO: roda mesmo se a Bybit lançou exceção.
+            // O 5M não tem fallback de cache (bot não calcula 5M); sem isto fica vazio na aba SCALP.
+            try {
+              const rt0 = realTimeData as Record<string, unknown>;
+              if (rt0.indicators_1h == null || rt0.indicators_15m == null || rt0.indicators_5m == null) {
+                const toC = (list: unknown[][]) => list.map(k => ({
+                  time: parseInt(k[0] as string), open: parseFloat(k[1] as string),
+                  high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
+                  close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
+                }));
+                const fpair = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+                const [g1h, g15m, g5m] = await Promise.all([
+                  rt0.indicators_1h  == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }) : null,
+                  rt0.indicators_15m == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=15m&limit=200`, { next: { revalidate: 60 } })  : null,
+                  rt0.indicators_5m  == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=5m&limit=200`,  { next: { revalidate: 30 } })  : null,
+                ]);
+                if (g1h  && g1h.ok)  { const j=await g1h.json();  if (Array.isArray(j)&&j.length>=30) rt0.indicators_1h  = calcDT(toC(j)); }
+                if (g15m && g15m.ok) { const j=await g15m.json(); if (Array.isArray(j)&&j.length>=30) rt0.indicators_15m = calcDT(toC(j)); }
+                if (g5m  && g5m.ok)  { const j=await g5m.json();  if (Array.isArray(j)&&j.length>=30) rt0.indicators_5m  = calcDT(toC(j)); }
+              }
+            } catch(_e) {}
+          }
 
           // Injeta dados do bot do cache se disponível (live=1 forçou fallback mas símbolo existe no Redis)
           if (symbolData) {
