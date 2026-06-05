@@ -479,13 +479,15 @@ export async function GET(request: Request) {
                 close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
               }));
             // 1H e 15M via Bybit (sem rate limit); 1D via CryptoCompare (cache 1h)
-            const [b1h, b15m, r1d] = await Promise.all([
+            const [b1h, b15m, b5m, r1d] = await Promise.all([
               fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=60&limit=200`,  { headers, next: { revalidate: 120 } }),
               fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=15&limit=200`,  { headers, next: { revalidate: 60 } }),
+              fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=5&limit=200`,   { headers, next: { revalidate: 30 } }),
               fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${cleanBase}&tsym=USDT&limit=200`, { next: { revalidate: 3600 } })
             ]);
             if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
             if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(bybitToCandles(j.result.list)); }
+            if (b5m.ok)  { const j=await b5m.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_5m  = calcDT(bybitToCandles(j.result.list)); }
             if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
           } catch(_e) {}
 
@@ -614,12 +616,14 @@ export async function GET(request: Request) {
             high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
             close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
           }));
-        const [f1h, f15m] = await Promise.all([
+        const [f1h, f15m, f5m] = await Promise.all([
           fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }),
           fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=15m&limit=200`, { next: { revalidate: 60 } }),
+          fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=5m&limit=200`,  { next: { revalidate: 30 } }),
         ]);
         if (f1h.ok)  { const j=await f1h.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_1h  = calcDT(binanceToCandles(j)); }
         if (f15m.ok) { const j=await f15m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_15m = calcDT(binanceToCandles(j)); }
+        if (f5m.ok)  { const j=await f5m.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_5m  = calcDT(binanceToCandles(j)); }
         // Fallback CryptoCompare se Binance não retornou (moeda não listada em futuros)
         if (!symbolData.indicators_1h) {
           const r1h = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } });
@@ -628,6 +632,10 @@ export async function GET(request: Request) {
         if (!symbolData.indicators_15m) {
           const r15m = await fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=15`, { next: { revalidate: 60 } });
           if (r15m.ok) { const j=await r15m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_15m = calcDT(j.Data.Data); }
+        }
+        if (!symbolData.indicators_5m) {
+          const r5m = await fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${cleanBase}&tsym=USDT&limit=100&aggregate=5`, { next: { revalidate: 30 } });
+          if (r5m.ok) { const j=await r5m.json(); if (j.Response==="Success"&&j.Data?.Data?.length>=30) symbolData.indicators_5m = calcDT(j.Data.Data); }
         }
       } catch(_e) {}
 

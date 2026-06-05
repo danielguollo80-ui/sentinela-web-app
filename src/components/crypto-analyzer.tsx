@@ -49,6 +49,7 @@ interface AnalysisResult {
   indicators_4h: IndicatorData;
   indicators_1h?: IndicatorData;
   indicators_15m?: IndicatorData;
+  indicators_5m?: IndicatorData;
   ai_analysis: string;
   veredito?: "APROVADO" | "VETADO" | "AGUARDAR" | "ERRO";
   setup?: {
@@ -290,6 +291,7 @@ export function CryptoAnalyzer() {
   const d4  = result?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
   const d1h = result?.indicators_1h ?? {};
   const d15 = result?.indicators_15m ?? {};
+  const d5  = result?.indicators_5m ?? {};
   const displayPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
 
   return (
@@ -465,7 +467,7 @@ export function CryptoAnalyzer() {
                            text-white bg-slate-800/80
                            data-[state=active]:bg-amber-400 data-[state=active]:text-slate-900 data-[state=active]:shadow-lg"
               >
-                SCALP (1H/15M)
+                SCALP (1H/15M/5M)
               </TabsTrigger>
             </TabsList>
             <TabsContent value="1d" className="mt-6 space-y-4">
@@ -546,6 +548,27 @@ export function CryptoAnalyzer() {
                     label="Volume 15M"
                     value={d15.volume_ratio != null ? `${d15.volume_ratio.toFixed(2)}x` : "—"}
                     valueClass={(d15.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d15.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
+                  />
+                </div>
+              </div>
+              {/* 5M Row */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400">Timeframe 5M</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCell label="RSI 5M" value={fmtNum(d5.rsi)} valueClass={rsiColor(d5.rsi)} />
+                  <StatCell label="MACD 5M" value={d5.macd_cross ?? "—"} valueClass={macdColor(d5.macd_cross)} />
+                  <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label)} />
+                  <StatCell label="Bollinger 5M" value={d5.bb_position ?? "—"} valueClass={bbColor(d5.bb_position)} />
+                  <StatCell label="DI+ 5M" value={fmtNum(d5.plus_di)} valueClass="text-emerald-400" />
+                  <StatCell label="DI- 5M" value={fmtNum(d5.minus_di)} valueClass="text-rose-400" />
+                  <StatCell label="Tendência EMA" value={d5.ema_position ?? "—"} valueClass={emaColor(d5.ema_position)} />
+                  <StatCell
+                    label="Volume 5M"
+                    value={d5.volume_ratio != null ? `${d5.volume_ratio.toFixed(2)}x` : "—"}
+                    valueClass={(d5.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d5.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
                   />
                 </div>
               </div>
