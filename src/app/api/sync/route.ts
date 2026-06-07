@@ -489,7 +489,17 @@ export async function GET(request: Request) {
               if (b1h.ok)  { const j=await b1h.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_1h  = calcDT(bybitToCandles(j.result.list)); }
               if (b15m.ok) { const j=await b15m.json(); if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_15m = calcDT(bybitToCandles(j.result.list)); }
               if (b5m.ok)  { const j=await b5m.json();  if (j.retCode===0&&j.result?.list?.length>=30) (realTimeData as Record<string,unknown>).indicators_5m  = calcDT(bybitToCandles(j.result.list)); }
-              if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); }
+              let _ccOk1d = false;
+              if (r1d.ok)  { const j=await r1d.json();  if (j.Response==="Success"&&j.Data?.Data?.length>=30) { (realTimeData as Record<string,unknown>).indicators_1d  = calcDT(j.Data.Data); _ccOk1d = true; } }
+              // Fallback Binance Futures 1D se o CryptoCompare falhou (rate limit). Sem isto, o card 1D
+              // herda o RSI de TF curto pré-preenchido acima → mostra RSI alto errado (ex.: 55.9 em vez de 23).
+              if (!_ccOk1d) {
+                try {
+                  const _fp1d = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+                  const _bd = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp1d}&interval=1d&limit=200`, { next: { revalidate: 3600 } });
+                  if (_bd.ok) { const j = await _bd.json(); if (Array.isArray(j) && j.length >= 30) (realTimeData as Record<string,unknown>).indicators_1d = calcDT(j.map((k: unknown[]) => ({ time: k[0] as number, open: +(k[1] as string), high: +(k[2] as string), low: +(k[3] as string), close: +(k[4] as string), volumeto: +(k[5] as string) }))); }
+                } catch(_e) {}
+              }
             } catch(_e) {}
 
             // Fallback Binance Futures p/ TFs de scalp — try PRÓPRIO: roda mesmo se a Bybit lançou exceção.
