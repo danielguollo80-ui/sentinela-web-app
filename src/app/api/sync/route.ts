@@ -599,6 +599,38 @@ export async function GET(request: Request) {
         }
       } catch(_e) { console.warn('Live price fetch failed:', _e); }
 
+      // Fetch 5M ao vivo — o bot não exporta indicators_5m para o Redis, por isso fica vazio na aba SCALP
+      if (!symbolData.indicators_5m) {
+        try {
+          const _fp5 = `${cleanBase}USDT`;
+          const _r5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`, { next: { revalidate: 30 } });
+          if (_r5m.ok) {
+            const _j5 = await _r5m.json() as unknown[][];
+            if (Array.isArray(_j5) && _j5.length >= 30) {
+              type Candle5 = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
+              const _c5: Candle5[] = _j5.map(k => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
+              const closes=_c5.map(c=>c.close); const highs=_c5.map(c=>c.high); const lows=_c5.map(c=>c.low); const vols=_c5.map(c=>c.volumeto);
+              let g=0,l=0; for(let i=1;i<=14;i++){const d=closes[i]-closes[i-1];d>=0?g+=d:l-=d;} let ag=g/14,al=l/14;
+              for(let i=15;i<closes.length;i++){const d=closes[i]-closes[i-1];ag=(ag*13+(d>0?d:0))/14;al=(al*13+(d<0?-d:0))/14;}
+              const rsi5=al===0?100:Math.round((100-100/(1+ag/al))*10)/10;
+              const ema5=(data:number[],p:number)=>{const k=2/(p+1);let e=data[0];for(let i=1;i<data.length;i++)e=data[i]*k+e*(1-k);return e;};
+              const m5=closes.map((_,i,a)=>ema5(a.slice(0,i+1),12)-ema5(a.slice(0,i+1),26)); const mv5=m5[m5.length-1]; const sv5=ema5(m5.slice(-50),9);
+              const macd_cross5=mv5>sv5?'ALTA (BULLISH)':'BAIXA (BEARISH)';
+              let pdm=0,mdm=0,tr14=0; for(let i=Math.max(1,highs.length-14);i<highs.length;i++){const up=highs[i]-highs[i-1],dn=lows[i-1]-lows[i]; pdm+=up>dn&&up>0?up:0;mdm+=dn>up&&dn>0?dn:0;tr14+=Math.max(highs[i]-lows[i],Math.abs(highs[i]-closes[i-1]),Math.abs(lows[i]-closes[i-1]));}
+              const plus_di5=tr14>0?Math.round(pdm/tr14*1000)/10:0; const minus_di5=tr14>0?Math.round(mdm/tr14*1000)/10:0;
+              const adx5=Math.round(Math.abs(plus_di5-minus_di5)/Math.max(plus_di5+minus_di5,0.01)*1000)/10;
+              const sl5=closes.slice(-20); const mean5=sl5.reduce((a,b)=>a+b,0)/sl5.length; const sd5=Math.sqrt(sl5.reduce((a,b)=>a+Math.pow(b-mean5,2),0)/sl5.length);
+              const bbu5=mean5+2*sd5,bbl5=mean5-2*sd5; const p5=closes[closes.length-1];
+              const bb_position5=p5>=bbu5?'SUPERIOR':p5<=bbl5?'INFERIOR':p5>mean5?'MEIO-SUPERIOR':'MEIO-INFERIOR';
+              const ema21_5=Math.round(ema5(closes,21)*10000)/10000; const ema50_5=Math.round(ema5(closes,50)*10000)/10000;
+              const ema_position5=p5>ema21_5&&p5>ema50_5?'BULLISH':p5<ema21_5&&p5<ema50_5?'BEARISH':'NEUTRO';
+              const vol20_5=vols.slice(-20).reduce((a,b)=>a+b,0)/20; const volume_ratio5=Math.round((vol20_5>0?vols[vols.length-1]/vol20_5:1)*10)/10;
+              symbolData.indicators_5m = { rsi: rsi5, macd_cross: macd_cross5, macd_above_zero: mv5>0, adx: adx5, adx_label: adx5>25?'FORTE':adx5>20?'FRACO':'SIDEWAYS', plus_di: plus_di5, minus_di: minus_di5, bb_position: bb_position5, ema21: ema21_5, ema50: ema50_5, ema_position: ema_position5, volume_ratio: volume_ratio5 };
+            }
+          }
+        } catch(_e) {}
+      }
+
       // Fetch 1H + 15M para aba Day Trade
       try {
         type Candle = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
