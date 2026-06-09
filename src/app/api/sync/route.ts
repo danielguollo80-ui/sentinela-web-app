@@ -600,19 +600,36 @@ export async function GET(request: Request) {
       } catch(_e) { console.warn('Live price fetch failed:', _e); }
 
       // Fetch 5M ao vivo — o bot não exporta indicators_5m para o Redis, por isso fica vazio na aba SCALP
-      // Usa Spot API (api.binance.com) porque fapi.binance.com é bloqueado nos IPs do Vercel
+      // Fonte primária: Bybit via bytick (api.binance.com E fapi.binance.com são geo-bloqueados nos IPs US do Vercel)
       if (!symbolData.indicators_5m) {
         try {
           const _fp5 = `${cleanBase}USDT`;
-          const _spotUrl = `https://api.binance.com/api/v3/klines?symbol=${_fp5}&interval=5m&limit=200`;
-          const _fapiUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`;
-          let _r5m = await fetch(_spotUrl, { cache: 'no-store' });
-          if (!_r5m.ok) _r5m = await fetch(_fapiUrl, { cache: 'no-store' });
-          if (_r5m.ok) {
-            const _j5 = await _r5m.json() as unknown[][];
-            if (Array.isArray(_j5) && _j5.length >= 30) {
-              type Candle5 = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
-              const _c5: Candle5[] = _j5.map(k => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
+          const _h5 = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
+          type Candle5 = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
+          let _c5: Candle5[] = [];
+          // 1) Bybit (bytick) — ordem DESC, precisa reverter
+          try {
+            const _rby = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${_fp5}&interval=5&limit=200`, { headers: _h5, cache: 'no-store' });
+            if (_rby.ok) {
+              const _jb = await _rby.json();
+              if (_jb.retCode === 0 && Array.isArray(_jb.result?.list) && _jb.result.list.length >= 30) {
+                _c5 = [..._jb.result.list].reverse().map((k: unknown[]) => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
+              }
+            }
+          } catch(_e) {}
+          // 2) Fallback Binance Spot/FAPI (ordem ASC) — caso o ambiente não seja geo-bloqueado
+          if (_c5.length < 30) {
+            let _r5m = await fetch(`https://api.binance.com/api/v3/klines?symbol=${_fp5}&interval=5m&limit=200`, { cache: 'no-store' });
+            if (!_r5m.ok) _r5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`, { cache: 'no-store' });
+            if (_r5m.ok) {
+              const _j5 = await _r5m.json() as unknown[][];
+              if (Array.isArray(_j5) && _j5.length >= 30) {
+                _c5 = _j5.map(k => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
+              }
+            }
+          }
+          if (_c5.length >= 30) {
+            {
               const closes=_c5.map(c=>c.close); const highs=_c5.map(c=>c.high); const lows=_c5.map(c=>c.low); const vols=_c5.map(c=>c.volumeto);
               let g=0,l=0; for(let i=1;i<=14;i++){const d=closes[i]-closes[i-1];d>=0?g+=d:l-=d;} let ag=g/14,al=l/14;
               for(let i=15;i<closes.length;i++){const d=closes[i]-closes[i-1];ag=(ag*13+(d>0?d:0))/14;al=(al*13+(d<0?-d:0))/14;}
@@ -694,11 +711,13 @@ export async function GET(request: Request) {
         ]);
         if (f1h.ok)  { const j=await f1h.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_1h  = calcDT(binanceToCandles(j)); }
         if (f15m.ok) { const j=await f15m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_15m = calcDT(binanceToCandles(j)); }
-        // 5M: Spot API preferido (fapi pode ser bloqueado em alguns ambientes cloud)
+        // 5M: fallback extra via Bybit (já preenchido pelo bloco standalone acima na maioria dos casos)
         if (!symbolData.indicators_5m) {
-          let f5m = await fetch(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=5m&limit=200`, { cache: 'no-store' });
-          if (!f5m.ok) f5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=5m&limit=200`, { cache: 'no-store' });
-          if (f5m.ok) { const j=await f5m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_5m = calcDT(binanceToCandles(j)); }
+          try {
+            const _h = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
+            const f5m = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${pair}&interval=5&limit=200`, { headers: _h, cache: 'no-store' });
+            if (f5m.ok) { const j=await f5m.json(); if (j.retCode===0 && Array.isArray(j.result?.list) && j.result.list.length>=30) symbolData.indicators_5m = calcDT([...j.result.list].reverse().map((k: unknown[]) => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }))); }
+          } catch(_e) {}
         }
         // Fallback CryptoCompare se Binance não retornou (moeda não listada em futuros)
         if (!symbolData.indicators_1h) {
