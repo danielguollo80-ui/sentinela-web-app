@@ -600,10 +600,14 @@ export async function GET(request: Request) {
       } catch(_e) { console.warn('Live price fetch failed:', _e); }
 
       // Fetch 5M ao vivo — o bot não exporta indicators_5m para o Redis, por isso fica vazio na aba SCALP
+      // Usa Spot API (api.binance.com) porque fapi.binance.com é bloqueado nos IPs do Vercel
       if (!symbolData.indicators_5m) {
         try {
           const _fp5 = `${cleanBase}USDT`;
-          const _r5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`, { next: { revalidate: 30 } });
+          const _spotUrl = `https://api.binance.com/api/v3/klines?symbol=${_fp5}&interval=5m&limit=200`;
+          const _fapiUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`;
+          let _r5m = await fetch(_spotUrl, { cache: 'no-store' });
+          if (!_r5m.ok) _r5m = await fetch(_fapiUrl, { cache: 'no-store' });
           if (_r5m.ok) {
             const _j5 = await _r5m.json() as unknown[][];
             if (Array.isArray(_j5) && _j5.length >= 30) {
@@ -684,14 +688,18 @@ export async function GET(request: Request) {
             high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
             close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
           }));
-        const [f1h, f15m, f5m] = await Promise.all([
+        const [f1h, f15m] = await Promise.all([
           fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }),
           fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=15m&limit=200`, { next: { revalidate: 60 } }),
-          fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=5m&limit=200`,  { next: { revalidate: 30 } }),
         ]);
         if (f1h.ok)  { const j=await f1h.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_1h  = calcDT(binanceToCandles(j)); }
         if (f15m.ok) { const j=await f15m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_15m = calcDT(binanceToCandles(j)); }
-        if (f5m.ok)  { const j=await f5m.json();  if (Array.isArray(j)&&j.length>=30) symbolData.indicators_5m  = calcDT(binanceToCandles(j)); }
+        // 5M: Spot API preferido (fapi pode ser bloqueado em alguns ambientes cloud)
+        if (!symbolData.indicators_5m) {
+          let f5m = await fetch(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=5m&limit=200`, { cache: 'no-store' });
+          if (!f5m.ok) f5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${pair}&interval=5m&limit=200`, { cache: 'no-store' });
+          if (f5m.ok) { const j=await f5m.json(); if (Array.isArray(j)&&j.length>=30) symbolData.indicators_5m = calcDT(binanceToCandles(j)); }
+        }
         // Fallback CryptoCompare se Binance não retornou (moeda não listada em futuros)
         if (!symbolData.indicators_1h) {
           const r1h = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=100`, { next: { revalidate: 120 } });
