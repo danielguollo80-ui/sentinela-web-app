@@ -607,25 +607,39 @@ export async function GET(request: Request) {
           const _h5 = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
           type Candle5 = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
           let _c5: Candle5[] = [];
-          // 1) Bybit (bytick) — ordem DESC, precisa reverter
-          try {
+          // Cadeia de fontes acessíveis de US East (iad1) — Binance/Bybit geo-bloqueiam US.
+          // 1) OKX (USDT, ordem DESC, OHLC) — [ts,o,h,l,c,vol]
+          if (_c5.length < 30) { try {
+            const _r = await fetch(`https://www.okx.com/api/v5/market/candles?instId=${cleanBase}-USDT&bar=5m&limit=200`, { headers: _h5, cache: 'no-store' });
+            if (_r.ok) { const _j = await _r.json(); if (_j.code === '0' && Array.isArray(_j.data) && _j.data.length >= 30)
+              _c5 = [..._j.data].reverse().map((k: string[]) => ({ time: parseInt(k[0]), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volumeto: parseFloat(k[5]) })); }
+          } catch(_e) {} }
+          // 2) KuCoin (USDT, ordem DESC) — [time(s),open,CLOSE,high,low,vol] (ordem de campos atípica)
+          if (_c5.length < 30) { try {
+            const _r = await fetch(`https://api.kucoin.com/api/v1/market/candles?type=5min&symbol=${cleanBase}-USDT`, { headers: _h5, cache: 'no-store' });
+            if (_r.ok) { const _j = await _r.json(); if (_j.code === '200000' && Array.isArray(_j.data) && _j.data.length >= 30)
+              _c5 = [..._j.data].reverse().map((k: string[]) => ({ time: parseInt(k[0]) * 1000, open: parseFloat(k[1]), close: parseFloat(k[2]), high: parseFloat(k[3]), low: parseFloat(k[4]), volumeto: parseFloat(k[5]) })); }
+          } catch(_e) {} }
+          // 3) Coinbase (par USD, ordem DESC) — [time(s),low,high,open,close,vol] (US-based, garantido em iad1)
+          if (_c5.length < 30) { try {
+            const _r = await fetch(`https://api.exchange.coinbase.com/products/${cleanBase}-USD/candles?granularity=300`, { headers: _h5, cache: 'no-store' });
+            if (_r.ok) { const _j = await _r.json() as number[][]; if (Array.isArray(_j) && _j.length >= 30)
+              _c5 = [..._j].reverse().map(k => ({ time: k[0] * 1000, low: k[1], high: k[2], open: k[3], close: k[4], volumeto: k[5] })); }
+          } catch(_e) {} }
+          // 4) Bybit (bytick) — ordem DESC; só funciona fora de US
+          if (_c5.length < 30) { try {
             const _rby = await fetch(`https://api.bytick.com/v5/market/kline?category=linear&symbol=${_fp5}&interval=5&limit=200`, { headers: _h5, cache: 'no-store' });
-            if (_rby.ok) {
-              const _jb = await _rby.json();
-              if (_jb.retCode === 0 && Array.isArray(_jb.result?.list) && _jb.result.list.length >= 30) {
-                _c5 = [..._jb.result.list].reverse().map((k: unknown[]) => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
-              }
-            }
-          } catch(_e) {}
-          // 2) Fallback Binance Spot/FAPI (ordem ASC) — caso o ambiente não seja geo-bloqueado
+            if (_rby.ok) { const _jb = await _rby.json(); if (_jb.retCode === 0 && Array.isArray(_jb.result?.list) && _jb.result.list.length >= 30)
+              _c5 = [..._jb.result.list].reverse().map((k: unknown[]) => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) })); }
+          } catch(_e) {} }
+          // 5) Binance Spot/FAPI (ordem ASC) — só funciona fora de US
           if (_c5.length < 30) {
             let _r5m = await fetch(`https://api.binance.com/api/v3/klines?symbol=${_fp5}&interval=5m&limit=200`, { cache: 'no-store' });
             if (!_r5m.ok) _r5m = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp5}&interval=5m&limit=200`, { cache: 'no-store' });
             if (_r5m.ok) {
               const _j5 = await _r5m.json() as unknown[][];
-              if (Array.isArray(_j5) && _j5.length >= 30) {
+              if (Array.isArray(_j5) && _j5.length >= 30)
                 _c5 = _j5.map(k => ({ time: parseInt(k[0] as string), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string) }));
-              }
             }
           }
           if (_c5.length >= 30) {
