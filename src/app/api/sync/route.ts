@@ -194,6 +194,8 @@ export async function GET(request: Request) {
             bb_position: bb.position, bb_upper: bb.upper, bb_lower: bb.lower,
             ema_position: emaPos, ema21, ema50, ema200,
             adx: adxData.adx, atr,
+            plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
+            minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
           },
           ai_analysis: `[Yahoo Finance] Analisando ${sym}...`,
           timestamp: Date.now() / 1000,
