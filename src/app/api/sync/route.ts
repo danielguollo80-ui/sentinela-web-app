@@ -300,6 +300,38 @@ export async function GET(request: Request) {
             } catch(_e) {}
           }
 
+          // OKX e KuCoin: acessíveis nos IPs US/iad1 do Vercel (Bybit é geo-bloqueada lá).
+          // Formato alvo (igual ao Bybit revertido): [ts(ms), open, high, low, close, volume].
+          const okxBar = interval === '120' ? '2H' : '4H';
+          const kuType = interval === '120' ? '2hour' : '4hour';
+          const ccBaseClean = cleanBase.replace('USDT', '');
+          // 2.5 TRY OKX (DESC, [ts(ms),o,h,l,c,vol,...])
+          if (klines.length === 0) {
+            try {
+              const res = await fetch(`https://www.okx.com/api/v5/market/candles?instId=${ccBaseClean}-USDT&bar=${okxBar}&limit=300`, { headers, cache: 'no-store' });
+              if (res.ok) {
+                const json = await res.json();
+                if (json.code === '0' && Array.isArray(json.data) && json.data.length > 0) {
+                  klines = [...json.data].reverse().map((k: string[]) => [parseInt(k[0]), k[1], k[2], k[3], k[4], k[5]]);
+                  source = `OKX (${timeframeLabel})`;
+                }
+              }
+            } catch(_e) {}
+          }
+          // 2.6 TRY KUCOIN (DESC, [time(s),open,CLOSE,high,low,vol]) — remapeado p/ [ts(ms),o,h,l,c,vol]
+          if (klines.length === 0) {
+            try {
+              const res = await fetch(`https://api.kucoin.com/api/v1/market/candles?type=${kuType}&symbol=${ccBaseClean}-USDT`, { headers, cache: 'no-store' });
+              if (res.ok) {
+                const json = await res.json();
+                if (json.code === '200000' && Array.isArray(json.data) && json.data.length > 0) {
+                  klines = [...json.data].reverse().map((k: string[]) => [parseInt(k[0]) * 1000, k[1], k[3], k[4], k[2], k[5]]);
+                  source = `KuCoin (${timeframeLabel})`;
+                }
+              }
+            } catch(_e) {}
+          }
+
           // 3. TRY CRYPTOCOMPARE (Ultimate Global Fallback)
           if (klines.length === 0) {
             try {
@@ -553,26 +585,45 @@ export async function GET(request: Request) {
         }
       }
 
-      // Chart history: fetch 4H candles (limit=1000 → ~167 days of granular history).
+      // Chart history: candles 4H via cadeia de fontes acessíveis de qualquer região.
+      // O CryptoCompare passou a exigir API key (HTTP 401), então OKX/KuCoin/Binance são as
+      // fontes primárias (OKX e KuCoin funcionam mesmo nos IPs US/iad1 do Vercel, onde Binance é geo-bloqueada).
+      // time é normalizado para SEGUNDOS (formato que o lightweight-charts espera), ordem ASC.
       let history: unknown[] = [];
       try {
         const cleanSymbol = ((symbolData.symbol as string) || selectedSymbol).replace('/', '').replace(':USDT', '').toUpperCase();
         const cleanBase = cleanSymbol.replace('USDT', '');
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=540&aggregate=4`, { next: { revalidate: 300 } });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.Response === "Success" && json.Data?.Data) {
-            history = json.Data.Data.map((d: Record<string, unknown>) => ({
-              time: d.time,
-              open: d.open,
-              high: d.high,
-              low: d.low,
-              close: d.close
-            }));
-          }
-        }
+        const _hh = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
+        type HCandle = { time: number; open: number; high: number; low: number; close: number };
+        let hc: HCandle[] = [];
+        // 1) OKX (bar=4H, DESC, [ts(ms),o,h,l,c,...]) — acessível em US (iad1)
+        if (hc.length < 30) { try {
+          const _r = await fetch(`https://www.okx.com/api/v5/market/candles?instId=${cleanBase}-USDT&bar=4H&limit=300`, { headers: _hh, cache: 'no-store' });
+          if (_r.ok) { const _j = await _r.json(); if (_j.code === '0' && Array.isArray(_j.data) && _j.data.length >= 30)
+            hc = [..._j.data].reverse().map((k: string[]) => ({ time: Math.floor(parseInt(k[0]) / 1000), open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]) })); }
+        } catch(_e) {} }
+        // 2) KuCoin (type=4hour, DESC, [time(s),open,CLOSE,high,low,vol]) — ordem de campos atípica
+        if (hc.length < 30) { try {
+          const _r = await fetch(`https://api.kucoin.com/api/v1/market/candles?type=4hour&symbol=${cleanBase}-USDT`, { headers: _hh, cache: 'no-store' });
+          if (_r.ok) { const _j = await _r.json(); if (_j.code === '200000' && Array.isArray(_j.data) && _j.data.length >= 30)
+            hc = [..._j.data].reverse().map((k: string[]) => ({ time: parseInt(k[0]), open: parseFloat(k[1]), close: parseFloat(k[2]), high: parseFloat(k[3]), low: parseFloat(k[4]) })); }
+        } catch(_e) {} }
+        // 3) Binance Futures (4h, ASC, [openTime(ms),o,h,l,c,...]) — só funciona fora de US
+        if (hc.length < 30) { try {
+          const _fp = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+          const _r = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp}&interval=4h&limit=300`, { next: { revalidate: 300 } });
+          if (_r.ok) { const _j = await _r.json() as unknown[][]; if (Array.isArray(_j) && _j.length >= 30)
+            hc = _j.map(k => ({ time: Math.floor(parseInt(k[0] as string) / 1000), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string) })); }
+        } catch(_e) {} }
+        // 4) CryptoCompare (legado — agora exige API key; mantido só como último recurso)
+        if (hc.length < 30) { try {
+          const _r = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${cleanBase}&tsym=USDT&limit=540&aggregate=4`, { next: { revalidate: 300 } });
+          if (_r.ok) { const _j = await _r.json(); if (_j.Response === "Success" && _j.Data?.Data)
+            hc = _j.Data.Data.map((d: Record<string, number>) => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close })); }
+        } catch(_e) {} }
+        history = hc;
       } catch(_e) {}
-      // Fallback to bot cache if daily fetch failed
+      // Fallback to bot cache if all live sources failed
       if (history.length === 0) history = (symbolData.history as unknown[]) || [];
 
       // Calcula S/R via pivot se o bot não enviou campos nomeados
