@@ -69,20 +69,54 @@ export function calculateATR(highs: number[], lows: number[], closes: number[], 
 }
 
 export function calculateADX(highs: number[], lows: number[], closes: number[], period: number = 14) {
-  const upMoves: number[] = [];
-  const downMoves: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const upMove = highs[i] - highs[i - 1];
+  const n = highs.length;
+  if (n < period * 2) return { adx: 0, plusDI: 0, minusDI: 0 };
+
+  // True Range e DM brutos
+  const tr: number[] = [], plusDM: number[] = [], minusDM: number[] = [];
+  for (let i = 1; i < n; i++) {
+    const upMove   = highs[i]  - highs[i - 1];
     const downMove = lows[i - 1] - lows[i];
-    upMoves.push(upMove > downMove && upMove > 0 ? upMove : 0);
-    downMoves.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    tr.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1])));
   }
-  // Simplified ADX/DI calculation for performance
-  const plusDI = upMoves.slice(-period).reduce((a, b) => a + b, 0) / period;
-  const minusDI = downMoves.slice(-period).reduce((a, b) => a + b, 0) / period;
-  const sum = plusDI + minusDI;
-  const adx = sum === 0 ? 0 : (Math.abs(plusDI - minusDI) / sum) * 100;
-  return { adx, plusDI, minusDI };
+
+  // Suavização de Wilder (soma inicial + rollover)
+  let trS = tr.slice(0, period).reduce((a, b) => a + b, 0);
+  let pS  = plusDM.slice(0, period).reduce((a, b) => a + b, 0);
+  let mS  = minusDM.slice(0, period).reduce((a, b) => a + b, 0);
+
+  const dx: number[] = [];
+  const addDX = (p: number, m: number, t: number) => {
+    if (t === 0) return;
+    const pdi = (p / t) * 100;
+    const mdi = (m / t) * 100;
+    const sum = pdi + mdi;
+    dx.push(sum === 0 ? 0 : (Math.abs(pdi - mdi) / sum) * 100);
+  };
+  addDX(pS, mS, trS);
+
+  for (let i = period; i < tr.length; i++) {
+    trS = trS - trS / period + tr[i];
+    pS  = pS  - pS  / period + plusDM[i];
+    mS  = mS  - mS  / period + minusDM[i];
+    addDX(pS, mS, trS);
+  }
+
+  // ADX = EMA de Wilder dos DX
+  let adx = dx.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < dx.length; i++) adx = (adx * (period - 1) + dx[i]) / period;
+
+  // DI+ e DI- finais normalizados
+  const plusDI  = trS > 0 ? (pS / trS) * 100 : 0;
+  const minusDI = trS > 0 ? (mS / trS) * 100 : 0;
+
+  return {
+    adx:     Math.round(adx     * 10) / 10,
+    plusDI:  Math.round(plusDI  * 10) / 10,
+    minusDI: Math.round(minusDI * 10) / 10,
+  };
 }
 
 export function calculateBB(data: number[], period: number = 20, stdDev: number = 2) {
