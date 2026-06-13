@@ -228,14 +228,14 @@ export function CryptoAnalyzer() {
   const [livePriceTs, setLivePriceTs] = useState<Date | null>(null);
   const livePriceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch direto da Binance Futures — zero custo Vercel, chamado só quando bot não tem dados
+  // Fetch direto da Binance Futures — preço + RSI sempre ao vivo (500 candles p/ RSI convergido)
   async function fetchBinanceLive(symbol: string): Promise<Partial<{ indicators_1h: IndicatorData; indicators_15m: IndicatorData; price: number }>> {
     const pair = `${symbol}USDT`;
     const base = "https://fapi.binance.com/fapi/v1";
     try {
       const [k1h, k15m, ticker] = await Promise.all([
-        fetch(`${base}/klines?symbol=${pair}&interval=1h&limit=60`).then(r => r.json()),
-        fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=60`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=1h&limit=500`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=200`).then(r => r.json()),
         fetch(`${base}/ticker/price?symbol=${pair}`).then(r => r.json()),
       ]);
       const closes1h  = Array.isArray(k1h)  ? k1h.map((c: any[])  => parseFloat(c[4])) : [];
@@ -291,15 +291,13 @@ export function CryptoAnalyzer() {
       const data = await res.json();
       let analysis = data.analysis;
 
-      // Sempre busca preço ao vivo da Binance — o cache do bot pode ter horas de atraso
-      const missing1h  = !analysis?.indicators_1h?.rsi;
-      const missing15m = !analysis?.indicators_15m?.rsi;
+      // Sempre busca preço + RSI 1H/15M ao vivo da Binance — cache do bot tem horas de atraso
       const live = await fetchBinanceLive(s);
       analysis = {
         ...analysis,
         price: (live.price && live.price > 0) ? live.price : (analysis?.price || 0),
-        indicators_1h:  missing1h  ? { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  } : analysis?.indicators_1h,
-        indicators_15m: missing15m ? { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m } : analysis?.indicators_15m,
+        indicators_1h:  { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  },
+        indicators_15m: { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m },
       };
 
       setResult(prev => silent
