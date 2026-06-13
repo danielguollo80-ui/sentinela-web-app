@@ -574,17 +574,17 @@ export function CryptoAnalyzer() {
               {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
               <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI <span className="text-slate-500 font-medium normal-case">4H</span></span>
-                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_4h?.rsi)}`}>
-                    {fmtNum(result.indicators_4h?.rsi)}
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI <span className="text-slate-500 font-medium normal-case">1D</span></span>
+                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d?.rsi)}`}>
+                    {fmtNum(result.indicators_1d?.rsi)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[12px] font-black text-white uppercase tracking-widest">WT <span className="text-slate-500 font-medium normal-case">4H</span></span>
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">WT <span className="text-slate-500 font-medium normal-case">1D</span></span>
                   <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${
-                    (result.indicators_4h?.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
+                    (result.indicators_1d?.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
-                    {fmtNum(result.indicators_4h?.wt1)}
+                    {fmtNum(result.indicators_1d?.wt1)}
                   </span>
                 </div>
               </div>
@@ -677,6 +677,7 @@ export function CryptoAnalyzer() {
                     value={d1h.volume_ratio != null ? `${d1h.volume_ratio.toFixed(2)}x` : "—"}
                     valueClass={(d1h.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d1h.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
                   />
+                  <StatCell label="WT 1H" value={fmtNum(d1h.wt1)} valueClass={(d1h.wt1 ?? 0) >= 60 ? "text-rose-400" : (d1h.wt1 ?? 0) <= -60 ? "text-emerald-400" : (d1h.wt1 ?? 0) > 0 ? "text-emerald-300" : "text-rose-300"} />
                 </div>
               </div>
               {/* 15M Row */}
@@ -698,6 +699,7 @@ export function CryptoAnalyzer() {
                     value={d15.volume_ratio != null ? `${d15.volume_ratio.toFixed(2)}x` : "—"}
                     valueClass={(d15.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d15.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
                   />
+                  <StatCell label="WT 15M" value={fmtNum(d15.wt1)} valueClass={(d15.wt1 ?? 0) >= 60 ? "text-rose-400" : (d15.wt1 ?? 0) <= -60 ? "text-emerald-400" : (d15.wt1 ?? 0) > 0 ? "text-emerald-300" : "text-rose-300"} />
                 </div>
               </div>
               {/* 5M Row */}
