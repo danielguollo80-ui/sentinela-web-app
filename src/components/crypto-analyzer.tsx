@@ -4,6 +4,10 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  calculateRSI, calculateMACD, calculateATR, calculateADX,
+  calculateBB, calculateEMA, calculateMFI, detectDivergence,
+} from "@/lib/indicators";
 const API_BASE = "/api/sync";
 
 interface IndicatorData {
@@ -228,25 +232,126 @@ export function CryptoAnalyzer() {
   const [livePriceTs, setLivePriceTs] = useState<Date | null>(null);
   const livePriceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch direto da Binance Futures — preço + RSI sempre ao vivo (500 candles p/ RSI convergido)
-  async function fetchBinanceLive(symbol: string): Promise<Partial<{ indicators_1h: IndicatorData; indicators_15m: IndicatorData; price: number }>> {
+  // Calcula todos os indicadores de um conjunto de candles
+  function calcIndicators(candles: any[][]): IndicatorData & { price?: number } {
+    if (!candles || candles.length < 30) return {};
+    const highs   = candles.map((c: any[]) => parseFloat(c[2]));
+    const lows    = candles.map((c: any[]) => parseFloat(c[3]));
+    const closes  = candles.map((c: any[]) => parseFloat(c[4]));
+    const volumes = candles.map((c: any[]) => parseFloat(c[5]));
+    const price   = closes[closes.length - 1];
+
+    const rsi    = Math.round(calculateRSI(closes, 14) * 10) / 10;
+    const macd   = calculateMACD(closes);
+    const bb     = calculateBB(closes);
+    const adxRes = calculateADX(highs, lows, closes, 14);
+    const atrArr = calculateATR(highs, lows, closes, 14);
+    const atr    = atrArr[atrArr.length - 1] ?? 0;
+    const ema21  = (calculateEMA(closes, 21) as number[]).at(-1) ?? 0;
+    const ema50  = (calculateEMA(closes, 50) as number[]).at(-1) ?? 0;
+    const ema200 = (calculateEMA(closes, 200) as number[]).at(-1) ?? 0;
+    const mfi    = calculateMFI(highs, lows, closes, volumes, 14);
+
+    // RSI series p/ divergência
+    const rsiSeries: number[] = [];
+    for (let i = 20; i <= closes.length; i++) rsiSeries.push(calculateRSI(closes.slice(0, i), 14));
+    const divergence = detectDivergence(closes, rsiSeries);
+
+    // EMA position
+    let ema_position = "NEUTRO";
+    if (price > ema21 && ema21 > ema50 && ema50 > ema200) ema_position = "BULLISH FORTE (P>21>50>200)";
+    else if (price > ema200) ema_position = "BULLISH PARCIAL (acima EMA200)";
+    else if (price < ema21 && ema21 < ema50 && ema50 < ema200) ema_position = "BEARISH FORTE (P<21<50<200)";
+    else if (price < ema200) ema_position = "BEARISH PARCIAL (abaixo EMA200)";
+
+    // BB width label
+    const bb_width_label = bb.width < 0.04 ? "SQUEEZE" : bb.width < 0.08 ? "NORMAL" : "EXPANSÃO";
+
+    // Volume ratio (média 20)
+    const avg20vol = volumes.length >= 20 ? volumes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20 : 0;
+    const volume_ratio = avg20vol > 0 ? Math.round((volumes.at(-1)! / avg20vol) * 100) / 100 : 0;
+
+    // ADX label
+    const adx_label = adxRes.adx >= 35 ? "FORTE" : adxRes.adx >= 20 ? "MODERADO" : "FRACO";
+
+    // WaveTrend (WT) simplificado via CCI proxy
+    const hlc3 = closes.map((c: number, i: number) => (highs[i] + lows[i] + c) / 3);
+    const ema10 = calculateEMA(hlc3, 10) as number[];
+    const meanDev = hlc3.slice(-10).reduce((a: number, b: number, _: number, arr: number[]) => {
+      const m = arr.reduce((x: number, y: number) => x + y, 0) / arr.length;
+      return a + Math.abs(b - m);
+    }, 0) / 10;
+    const ci = meanDev > 0 ? (hlc3[hlc3.length - 1] - ema10[ema10.length - 1]) / (0.015 * meanDev) : 0;
+    const wt1 = Math.round(ci * 10) / 10;
+    const vmc_dot = wt1 > 0 ? "GREEN" : "RED";
+
+    // Tendência macro (para RSI no topo da UI)
+    const trend = price > ema200 ? "BULLISH" : "BEARISH";
+
+    return {
+      price,
+      rsi,
+      macd_cross: macd.cross,
+      macd_momentum: macd.aboveZero ? "ACIMA ZERO" : "ABAIXO ZERO",
+      macd_above_zero: macd.aboveZero,
+      adx: Math.round(adxRes.adx * 10) / 10,
+      adx_label,
+      plus_di:  Math.round(adxRes.plusDI  * 10) / 10,
+      minus_di: Math.round(adxRes.minusDI * 10) / 10,
+      bb_position:   bb.position,
+      bb_width:      Math.round(bb.width * 1000) / 1000,
+      bb_width_label,
+      bb_upper: bb.upper,
+      bb_lower: bb.lower,
+      atr:     Math.round(atr * 100) / 100,
+      atr_pct: price > 0 ? Math.round((atr / price) * 10000) / 100 : 0,
+      ema21, ema50, ema200,
+      ema_position,
+      volume_ratio,
+      mfi:       Math.round(mfi * 10) / 10,
+      divergence,
+      wt1,
+      vmc_dot,
+      trend,
+    };
+  }
+
+  // Busca candles da Binance Futures para todos os TFs e calcula indicadores ao vivo
+  async function fetchBinanceLive(symbol: string): Promise<Partial<{
+    price: number; poc: number;
+    indicators_1d: IndicatorData; indicators_4h: IndicatorData;
+    indicators_1h: IndicatorData; indicators_15m: IndicatorData; indicators_5m: IndicatorData;
+  }>> {
     const pair = `${symbol}USDT`;
     const base = "https://fapi.binance.com/fapi/v1";
     try {
-      const [k1h, k15m, ticker] = await Promise.all([
+      const [k1d, k4h, k1h, k15m, k5m] = await Promise.all([
+        fetch(`${base}/klines?symbol=${pair}&interval=1d&limit=300`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=4h&limit=300`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=1h&limit=500`).then(r => r.json()),
-        fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=200`).then(r => r.json()),
-        fetch(`${base}/ticker/price?symbol=${pair}`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=300`).then(r => r.json()),
+        fetch(`${base}/klines?symbol=${pair}&interval=5m&limit=200`).then(r => r.json()),
       ]);
-      const closes1h  = Array.isArray(k1h)  ? k1h.map((c: any[])  => parseFloat(c[4])) : [];
-      const closes15m = Array.isArray(k15m) ? k15m.map((c: any[]) => parseFloat(c[4])) : [];
-      const vols1h    = Array.isArray(k1h)  ? k1h.map((c: any[])  => parseFloat(c[5])) : [];
-      const avgVol    = vols1h.length >= 20 ? vols1h.slice(-20).reduce((a, b) => a + b, 0) / 20 : 0;
-      const lastVol   = vols1h.at(-1) ?? 0;
+      const ind1d  = calcIndicators(k1d);
+      const ind4h  = calcIndicators(k4h);
+      const ind1h  = calcIndicators(k1h);
+      const ind15m = calcIndicators(k15m);
+      const ind5m  = calcIndicators(k5m);
+
+      // POC via Bollinger mid do 4H
+      const closes4h = Array.isArray(k4h) ? k4h.map((c: any[]) => parseFloat(c[4])) : [];
+      const mean4h   = closes4h.length >= 20 ? closes4h.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20 : 0;
+
+      const price = ind1h.price ?? ind4h.price ?? 0;
+
       return {
-        price: parseFloat(ticker?.price ?? "0"),
-        indicators_1h:  { rsi: calcRsi(closes1h)  ?? undefined, volume_ratio: avgVol > 0 ? Math.round((lastVol / avgVol) * 100) / 100 : undefined },
-        indicators_15m: { rsi: calcRsi(closes15m) ?? undefined },
+        price,
+        poc: Math.round(mean4h * 100) / 100,
+        indicators_1d:  ind1d,
+        indicators_4h:  ind4h,
+        indicators_1h:  ind1h,
+        indicators_15m: ind15m,
+        indicators_5m:  ind5m,
       };
     } catch { return {}; }
   }
@@ -291,13 +396,17 @@ export function CryptoAnalyzer() {
       const data = await res.json();
       let analysis = data.analysis;
 
-      // Sempre busca preço + RSI 1H/15M ao vivo da Binance — cache do bot tem horas de atraso
+      // Todos os TFs calculados ao vivo da Binance — cache do bot só serve de fallback
       const live = await fetchBinanceLive(s);
       analysis = {
         ...analysis,
-        price: (live.price && live.price > 0) ? live.price : (analysis?.price || 0),
+        price:          (live.price  && live.price  > 0) ? live.price  : (analysis?.price  || 0),
+        poc:            (live.poc    && live.poc    > 0) ? live.poc    : (analysis?.poc    || 0),
+        indicators_1d:  { ...(analysis?.indicators_1d  ?? {}), ...live.indicators_1d  },
+        indicators_4h:  { ...(analysis?.indicators_4h  ?? {}), ...live.indicators_4h  },
         indicators_1h:  { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  },
         indicators_15m: { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m },
+        indicators_5m:  { ...(analysis?.indicators_5m  ?? {}), ...live.indicators_5m  },
       };
 
       setResult(prev => silent
