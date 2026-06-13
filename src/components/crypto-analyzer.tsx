@@ -224,6 +224,10 @@ export function CryptoAnalyzer() {
     return Math.round((100 - 100 / (1 + ag / al)) * 10) / 10;
   }
 
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [livePriceTs, setLivePriceTs] = useState<Date | null>(null);
+  const livePriceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Fetch direto da Binance Futures — zero custo Vercel, chamado só quando bot não tem dados
   async function fetchBinanceLive(symbol: string): Promise<Partial<{ indicators_1h: IndicatorData; indicators_15m: IndicatorData; price: number }>> {
     const pair = `${symbol}USDT`;
@@ -247,6 +251,31 @@ export function CryptoAnalyzer() {
     } catch { return {}; }
   }
 
+  // Atualiza só o preço ao vivo via Binance ticker (levíssimo, sem recalcular indicadores)
+  const refreshLivePrice = useCallback(async (symbol: string) => {
+    if (!symbol) return;
+    try {
+      const pair = `${symbol}USDT`;
+      const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${pair}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const p = parseFloat(data?.price ?? "0");
+      if (p > 0) { setLivePrice(p); setLivePriceTs(new Date()); }
+    } catch { /* silencioso */ }
+  }, []);
+
+  // Inicia/reinicia o timer de preço ao vivo quando muda de moeda
+  useEffect(() => {
+    if (livePriceTimer.current) clearInterval(livePriceTimer.current);
+    setLivePrice(null);
+    setLivePriceTs(null);
+    if (!activeSymbol.current) return;
+    refreshLivePrice(activeSymbol.current);
+    livePriceTimer.current = setInterval(() => refreshLivePrice(activeSymbol.current), 30_000);
+    return () => { if (livePriceTimer.current) clearInterval(livePriceTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result?.symbol, refreshLivePrice]);
+
   const analyze = useCallback(async (sym: string, silent = false) => {
     const s = sym.trim().toUpperCase().replace("USDT", "").replace("/", "");
     if (!s) return;
@@ -262,18 +291,16 @@ export function CryptoAnalyzer() {
       const data = await res.json();
       let analysis = data.analysis;
 
-      // Se bot não tem dados 1H/15M para este símbolo, busca direto da Binance (zero custo Vercel)
+      // Sempre busca preço ao vivo da Binance — o cache do bot pode ter horas de atraso
       const missing1h  = !analysis?.indicators_1h?.rsi;
       const missing15m = !analysis?.indicators_15m?.rsi;
-      if (missing1h || missing15m) {
-        const live = await fetchBinanceLive(s);
-        analysis = {
-          ...analysis,
-          price: analysis?.price || live.price || 0,
-          indicators_1h:  missing1h  ? { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  } : analysis?.indicators_1h,
-          indicators_15m: missing15m ? { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m } : analysis?.indicators_15m,
-        };
-      }
+      const live = await fetchBinanceLive(s);
+      analysis = {
+        ...analysis,
+        price: (live.price && live.price > 0) ? live.price : (analysis?.price || 0),
+        indicators_1h:  missing1h  ? { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  } : analysis?.indicators_1h,
+        indicators_15m: missing15m ? { ...(analysis?.indicators_15m ?? {}), ...live.indicators_15m } : analysis?.indicators_15m,
+      };
 
       setResult(prev => silent
         ? { ...(prev ?? analysis), ...analysis, ai_analysis: prev?.ai_analysis ?? analysis.ai_analysis }
@@ -293,7 +320,8 @@ export function CryptoAnalyzer() {
   const d1h = result?.indicators_1h ?? {};
   const d15 = result?.indicators_15m ?? {};
   const d5  = result?.indicators_5m ?? {};
-  const displayPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
+  const cachedPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
+  const displayPrice = (livePrice && livePrice > 0) ? livePrice : cachedPrice;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -303,7 +331,12 @@ export function CryptoAnalyzer() {
       </form>
       {lastRefresh && (
         <p className="text-[11px] text-slate-500 text-right mb-6">
-          ↻ atualizado às {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          ↻ indicadores {lastRefresh.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          {livePriceTs && (
+            <span className="text-emerald-600 ml-2">
+              · preço ao vivo {livePriceTs.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
         </p>
       )}
 
@@ -358,7 +391,15 @@ export function CryptoAnalyzer() {
                   <div className="text-[16px] font-black uppercase tracking-[0.2em] text-slate-200">{result.symbol} ANALYSIS</div>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-sentinela-blue/20 text-sentinela-blue font-black border border-sentinela-blue/30">PRO</span>
                 </div>
-                <div className="text-2xl md:text-4xl font-black text-white tracking-tighter mb-0.5">${fmtPrice(displayPrice, 2)}</div>
+                <div className="flex items-baseline gap-2 mb-0.5">
+                  <div className="text-2xl md:text-4xl font-black text-white tracking-tighter">${fmtPrice(displayPrice, 2)}</div>
+                  {livePrice && livePrice > 0 && (
+                    <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                      AO VIVO
+                    </span>
+                  )}
+                </div>
                 {result.fng != null && (
                   <div className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${fngColor(result.fng)}`}>
                     FNG {result.fng} • {result.fng_label}
