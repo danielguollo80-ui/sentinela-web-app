@@ -683,7 +683,7 @@ export function CryptoAnalyzer() {
                   <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Timeframe 15M</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <StatCell label="RSI 15M" value={fmtNum(d15.rsi)} valueClass={rsiColor(d15.rsi)} />
                   <StatCell label="MACD 15M" value={d15.macd_cross ?? "—"} valueClass={macdColor(d15.macd_cross)} />
                   <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label)} />
@@ -698,7 +698,7 @@ export function CryptoAnalyzer() {
                   <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400">Timeframe 5M</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <StatCell label="RSI 5M" value={fmtNum(d5.rsi)} valueClass={rsiColor(d5.rsi)} />
                   <StatCell label="MACD 5M" value={d5.macd_cross ?? "—"} valueClass={macdColor(d5.macd_cross)} />
                   <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label)} />
