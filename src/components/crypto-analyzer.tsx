@@ -666,14 +666,14 @@ export function CryptoAnalyzer() {
                   <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
                   <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
                   <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
-                  <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
-                  <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
-                  <StatCell label="Tendência EMA" value={d1h.ema_position ?? "—"} valueClass={emaColor(d1h.ema_position)} />
                   <StatCell
                     label="Volume 1H"
                     value={d1h.volume_ratio != null ? `${d1h.volume_ratio.toFixed(2)}x` : "—"}
                     valueClass={(d1h.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d1h.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
                   />
+                  <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
+                  <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
+                  <StatCell label="Tendência EMA" value={d1h.ema_position ?? "—"} valueClass={emaColor(d1h.ema_position)} />
                   <StatCell label="WT 1H" value={fmtNum(d1h.wt1)} valueClass={(d1h.wt1 ?? 0) >= 60 ? "text-rose-400" : (d1h.wt1 ?? 0) <= -60 ? "text-emerald-400" : (d1h.wt1 ?? 0) > 0 ? "text-emerald-300" : "text-rose-300"} />
                 </div>
               </div>
