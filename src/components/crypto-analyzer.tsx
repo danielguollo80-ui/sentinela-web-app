@@ -621,12 +621,12 @@ export function CryptoAnalyzer() {
             </TabsList>
             <TabsContent value="1d" className="mt-6 space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCell label="Tendência EMA" value={d1.ema_position ?? "—"} valueClass={emaColor(d1.ema_position)} />
+                <StatCell label="Tendência 1D" value={d1.ema_position ?? "—"} valueClass={emaColor(d1.ema_position)} />
+                <StatCell label="Tendência 4H" value={d4.ema_position ?? "—"} valueClass={emaColor(d4.ema_position)} />
                 <StatCell label="RSI" value={fmtNum(d1.rsi)} valueClass={rsiColor(d1.rsi)} />
                 <StatCell label="ADX" value={fmtNum(d1.adx)} valueClass={adxColor(d1.adx_label)} />
                 <StatCell label="DI+" value={fmtNum(d1.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI-" value={fmtNum(d1.minus_di)} valueClass="text-rose-400" />
-                <StatCell label="Bollinger" value={d1.bb_position ?? "—"} valueClass={bbColor(d1.bb_position)} />
                 <StatCell label="MACD" value={d1.macd_cross ?? "—"} valueClass={macdColor(d1.macd_cross)} />
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
                 <StatCell label="ATR" value={`$${fmtPrice(d1.atr, 2)}`} />
