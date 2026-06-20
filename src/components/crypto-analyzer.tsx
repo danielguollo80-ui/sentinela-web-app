@@ -766,7 +766,7 @@ export function CryptoAnalyzer() {
                AI QUANTITATIVE ANALYSIS — CLAUDE
             </h3>
             <div className="relative z-10">
-               {result.ai_analysis ? (
+               {result.ai_analysis && result.ai_analysis.length > 80 && result.ai_analysis.includes("\n") ? (
                  <AiAnalysisBlock text={result.ai_analysis} />
                ) : (
                  <p className="text-xs text-slate-500 italic">Análise quantitativa indisponível no momento.</p>
