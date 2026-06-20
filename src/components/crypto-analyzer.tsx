@@ -629,7 +629,7 @@ export function CryptoAnalyzer() {
                 <StatCell label="DI-" value={fmtNum(d1.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="MACD" value={d1.macd_cross ?? "—"} valueClass={macdColor(d1.macd_cross)} />
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
-                <StatCell label="ATR" value={`$${fmtPrice(d1.atr, 2)}`} />
+                <StatCell label="ATR 1D" value={d1.atr_pct != null ? `${d1.atr_pct.toFixed(1)}%` : "—"} valueClass={(d1.atr_pct ?? 0) >= 5 ? "text-emerald-400" : "text-white"} />
                 <StatCell
                   label="Volume 1D"
                   value={d1.volume_ratio != null ? `${d1.volume_ratio.toFixed(2)}x` : "—"}
