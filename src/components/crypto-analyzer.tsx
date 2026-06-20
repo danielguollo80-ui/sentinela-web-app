@@ -709,6 +709,11 @@ export function CryptoAnalyzer() {
                   <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label)} />
                   <StatCell label="DI+ 5M" value={fmtNum(d5.plus_di)} valueClass="text-emerald-400" />
                   <StatCell label="DI- 5M" value={fmtNum(d5.minus_di)} valueClass="text-rose-400" />
+                  <StatCell
+                    label="Volume 5M"
+                    value={d5.volume_ratio != null ? `${d5.volume_ratio.toFixed(2)}x` : "—"}
+                    valueClass={(d5.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d5.volume_ratio ?? 0) >= 1.5 ? "text-yellow-400" : "text-slate-400"}
+                  />
                 </div>
               </div>
             </TabsContent>
