@@ -512,7 +512,7 @@ export function CryptoAnalyzer() {
                     FNG {result.fng} • {result.fng_label}
                   </div>
                 )}
-                {result.veredito && (
+                {result.veredito && result.setup && result.setup.tipo !== 'NEUTRO' && (
                   <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${
                     result.veredito === "APROVADO" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" :
                     result.veredito === "VETADO" ? "bg-rose-500/20 border-rose-500/40 text-rose-400" :
