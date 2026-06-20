@@ -642,14 +642,12 @@ export function CryptoAnalyzer() {
                 <StatCell label="RSI 4H" value={fmtNum(d4.rsi)} valueClass={rsiColor(d4.rsi)} />
                 <StatCell label="MACD 4H" value={d4.macd_cross ?? "—"} valueClass={macdColor(d4.macd_cross)} />
                 <StatCell label="ADX 4H" value={fmtNum(d4.adx)} valueClass={adxColor(d4.adx_label)} />
-                <StatCell label="VMC" value={d4.vmc_dot ?? "—"} valueClass={d4.vmc_dot === "GREEN" ? "text-emerald-400" : d4.vmc_dot === "RED" ? "text-rose-400" : "text-amber-400"} />
-                <StatCell label="WT1" value={d4.wt1?.toFixed(2)} valueClass={(d4.wt1 ?? 0) > 0 ? "text-emerald-400" : "text-rose-400"} />
-                <StatCell label="MFI" value={fmtNum(d4.mfi)} valueClass={(d4.mfi ?? 0) >= 80 ? "text-rose-400" : (d4.mfi ?? 0) <= 20 ? "text-emerald-400" : "text-white"} />
                 <StatCell label="DI+ 4H" value={fmtNum(d4.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 4H" value={fmtNum(d4.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
-                <StatCell label="Divergência" value={d4.divergence ?? "NEUTRO"} valueClass={d4.divergence?.includes("BULLISH") ? "text-emerald-400" : d4.divergence?.includes("BEARISH") ? "text-rose-400" : "text-slate-400"} />
-                <StatCell label="Volatilidade" value={d4.bb_width_label ?? "—"} valueClass={d4.bb_width_label === "SQUEEZE" ? "text-amber-400 animate-pulse" : "text-blue-400"} />
+                {d4.divergence && d4.divergence !== "NEUTRO" && (
+                  <StatCell label="Divergência" value={d4.divergence} valueClass={d4.divergence.includes("BULLISH") ? "text-emerald-400" : "text-rose-400"} />
+                )}
                 <StatCell
                   label="Volume 4H"
                   value={d4.volume_ratio != null ? `${d4.volume_ratio.toFixed(2)}x` : "—"}
@@ -668,7 +666,6 @@ export function CryptoAnalyzer() {
                   <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
                   <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
                   <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
-                  <StatCell label="Bollinger 1H" value={d1h.bb_position ?? "—"} valueClass={bbColor(d1h.bb_position)} />
                   <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
                   <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
                   <StatCell label="Tendência EMA" value={d1h.ema_position ?? "—"} valueClass={emaColor(d1h.ema_position)} />
@@ -690,16 +687,9 @@ export function CryptoAnalyzer() {
                   <StatCell label="RSI 15M" value={fmtNum(d15.rsi)} valueClass={rsiColor(d15.rsi)} />
                   <StatCell label="MACD 15M" value={d15.macd_cross ?? "—"} valueClass={macdColor(d15.macd_cross)} />
                   <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label)} />
-                  <StatCell label="Bollinger 15M" value={d15.bb_position ?? "—"} valueClass={bbColor(d15.bb_position)} />
                   <StatCell label="DI+ 15M" value={fmtNum(d15.plus_di)} valueClass="text-emerald-400" />
                   <StatCell label="DI- 15M" value={fmtNum(d15.minus_di)} valueClass="text-rose-400" />
                   <StatCell label="Tendência EMA" value={d15.ema_position ?? "—"} valueClass={emaColor(d15.ema_position)} />
-                  <StatCell
-                    label="Volume 15M"
-                    value={d15.volume_ratio != null ? `${d15.volume_ratio.toFixed(2)}x` : "—"}
-                    valueClass={(d15.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d15.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
-                  />
-                  <StatCell label="WT 15M" value={fmtNum(d15.wt1)} valueClass={(d15.wt1 ?? 0) >= 60 ? "text-rose-400" : (d15.wt1 ?? 0) <= -60 ? "text-emerald-400" : (d15.wt1 ?? 0) > 0 ? "text-emerald-300" : "text-rose-300"} />
                 </div>
               </div>
               {/* 5M Row */}
@@ -712,15 +702,8 @@ export function CryptoAnalyzer() {
                   <StatCell label="RSI 5M" value={fmtNum(d5.rsi)} valueClass={rsiColor(d5.rsi)} />
                   <StatCell label="MACD 5M" value={d5.macd_cross ?? "—"} valueClass={macdColor(d5.macd_cross)} />
                   <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label)} />
-                  <StatCell label="Bollinger 5M" value={d5.bb_position ?? "—"} valueClass={bbColor(d5.bb_position)} />
                   <StatCell label="DI+ 5M" value={fmtNum(d5.plus_di)} valueClass="text-emerald-400" />
                   <StatCell label="DI- 5M" value={fmtNum(d5.minus_di)} valueClass="text-rose-400" />
-                  <StatCell label="Tendência EMA" value={d5.ema_position ?? "—"} valueClass={emaColor(d5.ema_position)} />
-                  <StatCell
-                    label="Volume 5M"
-                    value={d5.volume_ratio != null ? `${d5.volume_ratio.toFixed(2)}x` : "—"}
-                    valueClass={(d5.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d5.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"}
-                  />
                 </div>
               </div>
             </TabsContent>
