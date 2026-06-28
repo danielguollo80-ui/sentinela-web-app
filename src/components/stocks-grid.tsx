@@ -45,6 +45,7 @@ interface StockAnalysis {
   supports?: number[];
   resistances?: number[];
   indicators_1d?: IndicatorData;
+  indicators_1w?: IndicatorData;
   indicators_4h?: IndicatorData;
   indicators_1h?: IndicatorData;
   indicators_15m?: IndicatorData;
@@ -173,6 +174,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
   const parsed = parseAnalysis(stock.ai_analysis);
   const isBuy = parsed.verdict.includes("COMPRA") || parsed.verdict.includes("LONG");
   const isSell = parsed.verdict.includes("VENDA") || parsed.verdict.includes("SHORT");
+  const d1w  = stock.indicators_1w;
   const d1   = stock.indicators_1d;
   const d4h  = stock.indicators_4h;
   const d1h  = stock.indicators_1h;
@@ -263,9 +265,12 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
         </div>
       </div>
 
-      {/* TABS — 3 TFs igual ao crypto */}
-      <Tabs defaultValue="1d" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+      {/* TABS — 4 TFs: semanal + 1D + 4H + scalp */}
+      <Tabs defaultValue="1w" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+          <TabsTrigger value="1w" className="rounded-xl font-black text-[10px] tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+            LONGO PRAZO SEMANAL
+          </TabsTrigger>
           <TabsTrigger value="1d" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
             ESTRATÉGICO (1D)
           </TabsTrigger>
@@ -276,6 +281,25 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             SCALP (1H/15M/5M)
           </TabsTrigger>
         </TabsList>
+
+        {/* ABA SEMANAL — visão de longo prazo */}
+        <TabsContent value="1w" className="mt-6 space-y-4">
+          {d1w ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <StatCell label="Tendência 1W" value={d1w.ema_position ?? "—"} valueClass={emaColor(d1w.ema_position)} />
+              <StatCell label="RSI 1W" value={fmtNum(d1w.rsi)} valueClass={rsiColor(d1w.rsi)} />
+              <StatCell label="MACD 1W" value={d1w.macd_cross ?? "—"} valueClass={macdColor(d1w.macd_cross)} />
+              <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label)} />
+              <StatCell label="DI+ 1W" value={fmtNum(d1w.plus_di)} valueClass="text-emerald-400" />
+              <StatCell label="DI- 1W" value={fmtNum(d1w.minus_di)} valueClass="text-rose-400" />
+              <StatCell label="Bollinger 1W" value={d1w.bb_position ?? "—"} valueClass={bbColor(d1w.bb_position)} />
+              <StatCell label="ATR 1W" value={d1w.atr_pct != null ? `${fmtNum(d1w.atr_pct)}%` : "—"} valueClass={(d1w.atr_pct ?? 0) >= 5 ? "text-emerald-400" : "text-white"} />
+              <StatCell label="Volume 1W" value={d1w.volume_ratio != null ? `${fmtNum(d1w.volume_ratio, 2)}x` : "—"} valueClass={volColor(d1w.volume_ratio)} />
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">Carregando dados semanais...</div>
+          )}
+        </TabsContent>
 
         {/* ABA 1D — igual ao crypto: Tendência 1D, Tendência 4H, RSI, ADX, DI+, DI-, MACD, ATR%, Volume */}
         <TabsContent value="1d" className="mt-6 space-y-4">
