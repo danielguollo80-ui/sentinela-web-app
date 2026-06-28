@@ -26,9 +26,12 @@ interface IndicatorData {
   ema50?: number;
   ema200?: number;
   adx?: number;
+  adx_label?: string;
   atr?: number;
+  atr_pct?: number;
   plus_di?: number;
   minus_di?: number;
+  volume_ratio?: number;
 }
 
 interface StockAnalysis {
@@ -42,6 +45,10 @@ interface StockAnalysis {
   supports?: number[];
   resistances?: number[];
   indicators_1d?: IndicatorData;
+  indicators_4h?: IndicatorData;
+  indicators_1h?: IndicatorData;
+  indicators_15m?: IndicatorData;
+  indicators_5m?: IndicatorData;
   preMarketPrice?: number;
   preMarketChange?: number;
   preMarketChangePercent?: number;
@@ -129,10 +136,10 @@ function emaColor(pos?: string) {
   return "text-white";
 }
 
-function adxColor(adx?: number) {
-  if (!adx) return "text-slate-400";
-  if (adx > 25) return "text-emerald-400";
-  if (adx > 20) return "text-yellow-400";
+function adxColor(label?: string) {
+  if (!label) return "text-slate-400";
+  if (label.includes("FORTE")) return "text-emerald-400";
+  if (label.includes("MODERADO")) return "text-yellow-500";
   return "text-slate-300";
 }
 
@@ -150,11 +157,27 @@ function macdColor(cross?: string) {
   return "text-white";
 }
 
+function fmtNum(v?: number | null, d = 1) {
+  if (v == null) return "—";
+  return Number(v).toFixed(d);
+}
+
+function volColor(ratio?: number) {
+  if (!ratio) return "text-slate-400";
+  if (ratio >= 2) return "text-emerald-400";
+  if (ratio >= 1.2) return "text-yellow-400";
+  return "text-slate-400";
+}
+
 function SearchResult({ stock }: { stock: StockAnalysis }) {
   const parsed = parseAnalysis(stock.ai_analysis);
   const isBuy = parsed.verdict.includes("COMPRA") || parsed.verdict.includes("LONG");
   const isSell = parsed.verdict.includes("VENDA") || parsed.verdict.includes("SHORT");
-  const d1 = stock.indicators_1d;
+  const d1   = stock.indicators_1d;
+  const d4h  = stock.indicators_4h;
+  const d1h  = stock.indicators_1h;
+  const d15m = stock.indicators_15m;
+  const d5m  = stock.indicators_5m;
 
   const auditColor = isBuy
     ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
@@ -221,18 +244,18 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             )}
           </div>
 
-          {/* SECTION 3: RSI + ADX */}
+          {/* SECTION 3: RSI 1D + ADX 1D */}
           <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
             <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-              <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI</span>
+              <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI <span className="text-slate-500 font-medium normal-case">1D</span></span>
               <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(stock.rsi)}`}>
                 {stock.rsi.toFixed(1)}
               </span>
             </div>
             <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-              <span className="text-[12px] font-black text-white uppercase tracking-widest">ADX</span>
-              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${adxColor(d1?.adx)}`}>
-                {d1?.adx?.toFixed(1) ?? "—"}
+              <span className="text-[12px] font-black text-white uppercase tracking-widest">ADX <span className="text-slate-500 font-medium normal-case">1D</span></span>
+              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${adxColor(d1?.adx_label)}`}>
+                {fmtNum(d1?.adx)}
               </span>
             </div>
           </div>
@@ -240,91 +263,174 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
         </div>
       </div>
 
-      {/* TABS — igual ao layout das cryptos */}
+      {/* TABS — 3 TFs igual ao crypto */}
       <Tabs defaultValue="1d" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
           <TabsTrigger value="1d" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
             ESTRATÉGICO (1D)
           </TabsTrigger>
-          <TabsTrigger value="levels" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
-            NÍVEIS S/R
+          <TabsTrigger value="4h" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
+            TÁTICO (4H)
           </TabsTrigger>
-          <TabsTrigger value="ai" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-amber-400 data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
-            IA ANÁLISE
+          <TabsTrigger value="scalp" className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200 text-white bg-slate-800/80 data-[state=active]:bg-amber-400 data-[state=active]:text-slate-900 data-[state=active]:shadow-lg">
+            SCALP (1H/15M/5M)
           </TabsTrigger>
         </TabsList>
 
+        {/* ABA 1D — igual ao crypto: Tendência 1D, Tendência 4H, RSI, ADX, DI+, DI-, MACD, ATR%, Volume */}
         <TabsContent value="1d" className="mt-6 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <StatCell label="Tendência EMA" value={d1?.ema_position ?? "—"} valueClass={emaColor(d1?.ema_position)} />
-            <StatCell label="RSI" value={stock.rsi.toFixed(1)} valueClass={rsiColor(stock.rsi)} />
-            <StatCell label="ADX" value={d1?.adx?.toFixed(1) ?? "—"} valueClass={adxColor(d1?.adx)} />
-            <StatCell label="DI+" value={d1?.plus_di?.toFixed(1) ?? "—"} valueClass="text-emerald-400" />
-            <StatCell label="DI-" value={d1?.minus_di?.toFixed(1) ?? "—"} valueClass="text-rose-400" />
-            <StatCell label="Bollinger" value={d1?.bb_position ?? "—"} valueClass={bbColor(d1?.bb_position)} />
+            <StatCell label="Tendência 1D" value={d1?.ema_position ?? "—"} valueClass={emaColor(d1?.ema_position)} />
+            <StatCell label="Tendência 4H" value={d4h?.ema_position ?? "—"} valueClass={emaColor(d4h?.ema_position)} />
+            <StatCell label="RSI" value={fmtNum(stock.rsi)} valueClass={rsiColor(stock.rsi)} />
+            <StatCell label="ADX" value={fmtNum(d1?.adx)} valueClass={adxColor(d1?.adx_label)} />
+            <StatCell label="DI+" value={fmtNum(d1?.plus_di)} valueClass="text-emerald-400" />
+            <StatCell label="DI-" value={fmtNum(d1?.minus_di)} valueClass="text-rose-400" />
             <StatCell label="MACD" value={d1?.macd_cross ?? "—"} valueClass={macdColor(d1?.macd_cross)} />
-            <StatCell label="ATR" value={d1?.atr ? `$${fmtPrice(d1.atr)}` : "—"} />
-            <StatCell label="Score" value={parsed.score} valueClass="text-blue-400" />
+            <StatCell label="ATR 1D" value={d1?.atr_pct != null ? `${fmtNum(d1.atr_pct)}%` : "—"} valueClass={(d1?.atr_pct ?? 0) >= 3 ? "text-emerald-400" : "text-white"} />
+            <StatCell label="Volume 1D" value={d1?.volume_ratio != null ? `${fmtNum(d1.volume_ratio, 2)}x` : "—"} valueClass={volColor(d1?.volume_ratio)} />
           </div>
         </TabsContent>
 
-        <TabsContent value="levels" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Critical Support Levels
-              </h3>
-              <div className="space-y-3">
-                {(stock.supports ?? []).slice(0, 3).map((s, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
-                      <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-widest">Support {i + 1}</span>
-                    </div>
-                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(s)}</span>
-                  </div>
-                ))}
-                {(stock.supports ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem suportes disponíveis</p>}
-              </div>
+        {/* ABA 4H — igual ao crypto: RSI, MACD, ADX, DI+, DI-, Volume, ATR% */}
+        <TabsContent value="4h" className="mt-6 space-y-4">
+          {d4h ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <StatCell label="RSI 4H" value={fmtNum(d4h.rsi)} valueClass={rsiColor(d4h.rsi)} />
+              <StatCell label="MACD 4H" value={d4h.macd_cross ?? "—"} valueClass={macdColor(d4h.macd_cross)} />
+              <StatCell label="ADX 4H" value={fmtNum(d4h.adx)} valueClass={adxColor(d4h.adx_label)} />
+              <StatCell label="DI+ 4H" value={fmtNum(d4h.plus_di)} valueClass="text-emerald-400" />
+              <StatCell label="DI- 4H" value={fmtNum(d4h.minus_di)} valueClass="text-rose-400" />
+              <StatCell label="Bollinger 4H" value={d4h.bb_position ?? "—"} valueClass={bbColor(d4h.bb_position)} />
+              <StatCell label="ATR 4H" value={d4h.atr_pct != null ? `${fmtNum(d4h.atr_pct)}%` : "—"} valueClass={(d4h.atr_pct ?? 0) >= 1.5 ? "text-emerald-400" : "text-white"} />
+              <StatCell label="Volume 4H" value={d4h.volume_ratio != null ? `${fmtNum(d4h.volume_ratio, 2)}x` : "—"} valueClass={volColor(d4h.volume_ratio)} />
+              <StatCell label="Score" value={parsed.score} valueClass="text-blue-400" />
             </div>
-            <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                Critical Resistance Levels
-              </h3>
-              <div className="space-y-3">
-                {(stock.resistances ?? []).slice(0, 3).map((r, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
-                      <span className="text-xs md:text-sm font-black text-rose-400 uppercase tracking-widest">Resistance {i + 1}</span>
-                    </div>
-                    <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(r)}</span>
-                  </div>
-                ))}
-                {(stock.resistances ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem resistências disponíveis</p>}
-              </div>
-            </div>
-          </div>
+          ) : (
+            <div className="p-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest">Carregando dados 4H...</div>
+          )}
         </TabsContent>
 
-        <TabsContent value="ai" className="mt-6">
-          <div className="glass-dark rounded-2xl border border-blue-500/20 p-4 shadow-lg relative overflow-hidden">
-            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              AI QUANTITATIVE ANALYSIS — CLAUDE
-            </h3>
-            <div className="space-y-3">
-              {stock.ai_analysis.split('\n').filter(Boolean).map((line, i) => (
-                <div key={i} className="text-sm font-medium leading-relaxed px-4 py-3 rounded-xl bg-slate-900/60 border border-white/5 text-slate-200">
-                  {stripHtml(line)}
-                </div>
-              ))}
+        {/* ABA SCALP — 3 seções: 1H / 15M / 5M igual ao crypto */}
+        <TabsContent value="scalp" className="mt-6 space-y-5">
+          {/* 1H */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">Timeframe 1H</span>
             </div>
+            {d1h ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
+                <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
+                <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
+                <StatCell label="Volume 1H" value={d1h.volume_ratio != null ? `${fmtNum(d1h.volume_ratio, 2)}x` : "—"} valueClass={volColor(d1h.volume_ratio)} />
+                <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
+                <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
+                <StatCell label="Tendência EMA" value={d1h.ema_position ?? "—"} valueClass={emaColor(d1h.ema_position)} />
+                <StatCell label="ATR 1H" value={d1h.atr_pct != null ? `${fmtNum(d1h.atr_pct)}%` : "—"} />
+              </div>
+            ) : (
+              <div className="p-4 text-center text-slate-600 text-xs italic">Carregando...</div>
+            )}
+          </div>
+          {/* 15M */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Timeframe 15M</span>
+            </div>
+            {d15m ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCell label="RSI 15M" value={fmtNum(d15m.rsi)} valueClass={rsiColor(d15m.rsi)} />
+                <StatCell label="MACD 15M" value={d15m.macd_cross ?? "—"} valueClass={macdColor(d15m.macd_cross)} />
+                <StatCell label="ADX 15M" value={fmtNum(d15m.adx)} valueClass={adxColor(d15m.adx_label)} />
+                <StatCell label="Volume 15M" value={d15m.volume_ratio != null ? `${fmtNum(d15m.volume_ratio, 2)}x` : "—"} valueClass={volColor(d15m.volume_ratio)} />
+                <StatCell label="DI+ 15M" value={fmtNum(d15m.plus_di)} valueClass="text-emerald-400" />
+                <StatCell label="DI- 15M" value={fmtNum(d15m.minus_di)} valueClass="text-rose-400" />
+                <StatCell label="Tendência EMA" value={d15m.ema_position ?? "—"} valueClass={emaColor(d15m.ema_position)} />
+                <StatCell label="ATR 15M" value={d15m.atr_pct != null ? `${fmtNum(d15m.atr_pct)}%` : "—"} />
+              </div>
+            ) : (
+              <div className="p-4 text-center text-slate-600 text-xs italic">Carregando...</div>
+            )}
+          </div>
+          {/* 5M */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400">Timeframe 5M</span>
+            </div>
+            {d5m ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <StatCell label="RSI 5M" value={fmtNum(d5m.rsi)} valueClass={rsiColor(d5m.rsi)} />
+                <StatCell label="MACD 5M" value={d5m.macd_cross ?? "—"} valueClass={macdColor(d5m.macd_cross)} />
+                <StatCell label="ADX 5M" value={fmtNum(d5m.adx)} valueClass={adxColor(d5m.adx_label)} />
+                <StatCell label="DI+ 5M" value={fmtNum(d5m.plus_di)} valueClass="text-emerald-400" />
+                <StatCell label="DI- 5M" value={fmtNum(d5m.minus_di)} valueClass="text-rose-400" />
+                <StatCell label="Volume 5M" value={d5m.volume_ratio != null ? `${fmtNum(d5m.volume_ratio, 2)}x` : "—"} valueClass={volColor(d5m.volume_ratio)} />
+              </div>
+            ) : (
+              <div className="p-4 text-center text-slate-600 text-xs italic">Carregando...</div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* S/R Levels — fora das abas, sempre visível */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Critical Support Levels
+          </h3>
+          <div className="space-y-3">
+            {(stock.supports ?? []).slice(0, 3).map((s, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-10 bg-emerald-500/40 rounded-full" />
+                  <span className="text-xs md:text-sm font-black text-emerald-400 uppercase tracking-widest">Support {i + 1}</span>
+                </div>
+                <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(s)}</span>
+              </div>
+            ))}
+            {(stock.supports ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem suportes disponíveis</p>}
+          </div>
+        </div>
+        <div className="glass-dark rounded-2xl border border-white/10 p-5 shadow-lg bg-slate-900/20">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Critical Resistance Levels
+          </h3>
+          <div className="space-y-3">
+            {(stock.resistances ?? []).slice(0, 3).map((r, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-10 bg-rose-500/40 rounded-full" />
+                  <span className="text-xs md:text-sm font-black text-rose-400 uppercase tracking-widest">Resistance {i + 1}</span>
+                </div>
+                <span className="text-base md:text-xl font-black text-white font-mono tracking-tighter">${fmtPrice(r)}</span>
+              </div>
+            ))}
+            {(stock.resistances ?? []).length === 0 && <p className="text-xs text-slate-500 italic text-center py-2">Sem resistências disponíveis</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* AI Analysis — fora das abas, sempre visível */}
+      <div className="glass-dark rounded-2xl border border-blue-500/20 p-4 shadow-lg relative overflow-hidden">
+        <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          AI QUANTITATIVE ANALYSIS — CLAUDE
+        </h3>
+        <div className="space-y-3">
+          {stock.ai_analysis.split('\n').filter(Boolean).map((line, i) => (
+            <div key={i} className="text-sm font-medium leading-relaxed px-4 py-3 rounded-xl bg-slate-900/60 border border-white/5 text-slate-200">
+              {stripHtml(line)}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <a
         href={`https://finance.yahoo.com/quote/${stock.symbol}`}

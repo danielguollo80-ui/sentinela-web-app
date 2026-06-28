@@ -151,9 +151,10 @@ export async function GET(request: Request) {
         }
         const meta = chartResult.meta;
         const quotes = chartResult.indicators?.quote?.[0] || {};
-        const closes = ((quotes.close || []) as (number | null)[]).filter((c): c is number => c != null);
-        const highs  = ((quotes.high  || []) as (number | null)[]).filter((h): h is number => h != null);
-        const lows   = ((quotes.low   || []) as (number | null)[]).filter((l): l is number => l != null);
+        const closes  = ((quotes.close  || []) as (number | null)[]).filter((c): c is number => c != null);
+        const highs   = ((quotes.high   || []) as (number | null)[]).filter((h): h is number => h != null);
+        const lows    = ((quotes.low    || []) as (number | null)[]).filter((l): l is number => l != null);
+        const vols1d  = ((quotes.volume || []) as (number | null)[]).filter((v): v is number => v != null);
         if (closes.length < 20) {
           return NextResponse.json({ error: `Dados insuficientes para "${sym}".` }, { status: 404 });
         }
@@ -194,8 +195,11 @@ export async function GET(request: Request) {
             bb_position: bb.position, bb_upper: bb.upper, bb_lower: bb.lower,
             ema_position: emaPos, ema21, ema50, ema200,
             adx: adxData.adx, atr,
+            adx_label: adxData.adx >= 35 ? "FORTE" : adxData.adx >= 20 ? "MODERADO" : "FRACO",
+            atr_pct: price > 0 ? Math.round((atr / price) * 10000) / 100 : 0,
             plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
             minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
+            volume_ratio: (() => { const avg = vols1d.length >= 20 ? vols1d.slice(-20).reduce((a, b) => a + b, 0) / 20 : 0; return avg > 0 ? Math.round((vols1d[vols1d.length - 1] / avg) * 100) / 100 : 0; })(),
           },
           ai_analysis: `[Yahoo Finance] Analisando ${sym}...`,
           timestamp: Date.now() / 1000,
@@ -204,6 +208,64 @@ export async function GET(request: Request) {
         // Pré-market em paralelo
         const pm = await fetchPreMarket(sym);
         if (pm) Object.assign(realtimeData, pm);
+        // Multi-TF: busca 1H/15M/5M do Yahoo Finance e deriva 4H agregando 1H
+        {
+          const [res1h, res15m, res5m] = await Promise.all([
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1h&range=60d`, { headers, next: { revalidate: 120 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=15m&range=5d`, { headers, next: { revalidate: 60 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=5m&range=1d`, { headers, next: { revalidate: 30 } }),
+          ]);
+          type YQ = { close?: (number|null)[], high?: (number|null)[], low?: (number|null)[], volume?: (number|null)[] };
+          type YChart = { chart?: { result?: Array<{ indicators?: { quote?: YQ[] } }> } };
+          const extractCandles = (json: unknown) => {
+            try {
+              const r = (json as YChart)?.chart?.result?.[0];
+              if (!r) return null;
+              const q: YQ = r.indicators?.quote?.[0] || {};
+              const c = (q.close  || []).filter((x): x is number => x != null);
+              const h = (q.high   || []).filter((x): x is number => x != null);
+              const l = (q.low    || []).filter((x): x is number => x != null);
+              const v = (q.volume || []).filter((x): x is number => x != null);
+              return c.length >= 20 ? { c, h, l, v } : null;
+            } catch { return null; }
+          };
+          const calcTFStock = (c: number[], h: number[], l: number[], v: number[]) => {
+            const { calculateRSI: R, calculateMACD: M, calculateBB: B, calculateADX: A, calculateATR: T, calculateEMA: E } = { calculateRSI, calculateMACD, calculateBB, calculateADX, calculateATR, calculateEMA };
+            const rsiV = R(c, 14); const macdV = M(c); const bbV = B(c); const adxV = A(h, l, c, 14);
+            const atrV = T(h, l, c, 14).pop() ?? 0; const e21 = E(c, 21).pop() ?? 0; const e50 = E(c, 50).pop() ?? 0;
+            const p = c[c.length - 1];
+            const emaTF = p > e21 && p > e50 ? 'BULLISH' : p < e21 && p < e50 ? 'BEARISH' : 'NEUTRO';
+            const tot = adxV.plusDI + adxV.minusDI;
+            const avg20 = v.length >= 20 ? v.slice(-20).reduce((a, b) => a + b, 0) / 20 : 0;
+            return {
+              rsi: rsiV, macd_cross: macdV.cross, macd_above_zero: macdV.aboveZero,
+              bb_position: bbV.position, adx: adxV.adx,
+              adx_label: adxV.adx >= 35 ? "FORTE" : adxV.adx >= 20 ? "MODERADO" : "FRACO",
+              atr: atrV, atr_pct: p > 0 ? Math.round((atrV / p) * 10000) / 100 : 0,
+              ema21: e21, ema50: e50, ema_position: emaTF,
+              plus_di:  tot === 0 ? 0 : Math.round(adxV.plusDI  / tot * 1000) / 10,
+              minus_di: tot === 0 ? 0 : Math.round(adxV.minusDI / tot * 1000) / 10,
+              volume_ratio: avg20 > 0 ? Math.round((v[v.length - 1] / avg20) * 100) / 100 : 0,
+            };
+          };
+          if (res1h.ok) {
+            const d = extractCandles(await res1h.json());
+            if (d) {
+              realtimeData.indicators_1h = calcTFStock(d.c, d.h, d.l, d.v);
+              // 4H: agrega cada 4 candles 1H
+              const c4: number[] = [], h4: number[] = [], l4: number[] = [], v4: number[] = [];
+              for (let i = 3; i < d.c.length; i += 4) {
+                c4.push(d.c[i]);
+                h4.push(Math.max(...d.h.slice(i - 3, i + 1)));
+                l4.push(Math.min(...d.l.slice(i - 3, i + 1)));
+                v4.push(d.v.slice(i - 3, i + 1).reduce((a, b) => a + b, 0));
+              }
+              if (c4.length >= 20) realtimeData.indicators_4h = calcTFStock(c4, h4, l4, v4);
+            }
+          }
+          if (res15m.ok) { const d = extractCandles(await res15m.json()); if (d) realtimeData.indicators_15m = calcTFStock(d.c, d.h, d.l, d.v); }
+          if (res5m.ok)  { const d = extractCandles(await res5m.json());  if (d) realtimeData.indicators_5m  = calcTFStock(d.c, d.h, d.l, d.v); }
+        }
         // AI Analysis (skipped on auto-refresh)
         if (!noAI) { try {
           const Anthropic = (await import('@anthropic-ai/sdk')).default;
