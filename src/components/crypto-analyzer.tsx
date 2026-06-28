@@ -49,6 +49,7 @@ interface AnalysisResult {
   fng: number;
   fng_label: string;
   news_pt?: string;
+  indicators_1w?: IndicatorData;
   indicators_1d: IndicatorData;
   indicators_4h: IndicatorData;
   indicators_1h?: IndicatorData;
@@ -319,19 +320,21 @@ export function CryptoAnalyzer() {
   // Busca candles da Binance Futures para todos os TFs e calcula indicadores ao vivo
   async function fetchBinanceLive(symbol: string): Promise<Partial<{
     price: number; poc: number;
-    indicators_1d: IndicatorData; indicators_4h: IndicatorData;
+    indicators_1w: IndicatorData; indicators_1d: IndicatorData; indicators_4h: IndicatorData;
     indicators_1h: IndicatorData; indicators_15m: IndicatorData; indicators_5m: IndicatorData;
   }>> {
     const pair = `${symbol}USDT`;
     const base = "https://fapi.binance.com/fapi/v1";
     try {
-      const [k1d, k4h, k1h, k15m, k5m] = await Promise.all([
+      const [k1w, k1d, k4h, k1h, k15m, k5m] = await Promise.all([
+        fetch(`${base}/klines?symbol=${pair}&interval=1w&limit=260`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=1d&limit=300`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=4h&limit=300`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=1h&limit=500`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=15m&limit=300`).then(r => r.json()),
         fetch(`${base}/klines?symbol=${pair}&interval=5m&limit=200`).then(r => r.json()),
       ]);
+      const ind1w  = calcIndicators(k1w);
       const ind1d  = calcIndicators(k1d);
       const ind4h  = calcIndicators(k4h);
       const ind1h  = calcIndicators(k1h);
@@ -347,6 +350,7 @@ export function CryptoAnalyzer() {
       return {
         price,
         poc: Math.round(mean4h * 100) / 100,
+        indicators_1w:  ind1w,
         indicators_1d:  ind1d,
         indicators_4h:  ind4h,
         indicators_1h:  ind1h,
@@ -402,6 +406,7 @@ export function CryptoAnalyzer() {
         ...analysis,
         price:          (live.price  && live.price  > 0) ? live.price  : (analysis?.price  || 0),
         poc:            (live.poc    && live.poc    > 0) ? live.poc    : (analysis?.poc    || 0),
+        indicators_1w:  { ...(analysis?.indicators_1w  ?? {}), ...live.indicators_1w  },
         indicators_1d:  { ...(analysis?.indicators_1d  ?? {}), ...live.indicators_1d  },
         indicators_4h:  { ...(analysis?.indicators_4h  ?? {}), ...live.indicators_4h  },
         indicators_1h:  { ...(analysis?.indicators_1h  ?? {}), ...live.indicators_1h  },
@@ -422,6 +427,7 @@ export function CryptoAnalyzer() {
   if (!isMounted) return null;
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
+  const d1w = result?.indicators_1w ?? {};
   const d1  = result?.indicators_1d ?? (result as any)?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
   const d4  = result?.indicators_4h ?? (result as any)?.indicators_1h ?? {};
   const d1h = result?.indicators_1h ?? {};
@@ -592,8 +598,16 @@ export function CryptoAnalyzer() {
             </div>
           </div>
 
-          <Tabs defaultValue="1d" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+          <Tabs defaultValue="1w" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
+              <TabsTrigger
+                value="1w"
+                className="rounded-xl font-black text-[10px] tracking-wider transition-all duration-200
+                           text-white bg-slate-800/80
+                           data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                LONGO PRAZO SEMANAL
+              </TabsTrigger>
               <TabsTrigger
                 value="1d"
                 className="rounded-xl font-black text-[10px] md:text-xs tracking-wider transition-all duration-200
@@ -619,6 +633,19 @@ export function CryptoAnalyzer() {
                 SCALP (1H/15M/5M)
               </TabsTrigger>
             </TabsList>
+            <TabsContent value="1w" className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <StatCell label="Tendência 1W" value={d1w.ema_position ?? "—"} valueClass={emaColor(d1w.ema_position)} />
+                <StatCell label="RSI 1W" value={fmtNum(d1w.rsi)} valueClass={rsiColor(d1w.rsi)} />
+                <StatCell label="MACD 1W" value={d1w.macd_cross ?? "—"} valueClass={macdColor(d1w.macd_cross)} />
+                <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label)} />
+                <StatCell label="DI+ 1W" value={fmtNum(d1w.plus_di)} valueClass="text-emerald-400" />
+                <StatCell label="DI- 1W" value={fmtNum(d1w.minus_di)} valueClass="text-rose-400" />
+                <StatCell label="Bollinger 1W" value={d1w.bb_position ?? "—"} valueClass={d1w.bb_position?.includes("Superior") ? "text-rose-400" : d1w.bb_position?.includes("Inferior") ? "text-emerald-400" : "text-yellow-400"} />
+                <StatCell label="ATR 1W" value={d1w.atr_pct != null ? `${d1w.atr_pct.toFixed(1)}%` : "—"} valueClass={(d1w.atr_pct ?? 0) >= 10 ? "text-emerald-400" : "text-white"} />
+                <StatCell label="Volume 1W" value={d1w.volume_ratio != null ? `${d1w.volume_ratio.toFixed(2)}x` : "—"} valueClass={(d1w.volume_ratio ?? 0) >= 2 ? "text-emerald-400" : (d1w.volume_ratio ?? 0) >= 1.2 ? "text-yellow-400" : "text-slate-400"} />
+              </div>
+            </TabsContent>
             <TabsContent value="1d" className="mt-6 space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <StatCell label="Tendência 1D" value={d1.ema_position ?? "—"} valueClass={emaColor(d1.ema_position)} />
