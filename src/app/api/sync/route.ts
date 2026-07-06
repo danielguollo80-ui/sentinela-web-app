@@ -129,40 +129,33 @@ export async function GET(request: Request) {
       if (fullData?.[sym]) {
         const pm = await fetchPreMarket(sym);
         const cached = { ...fullData[sym], ...(pm ?? {}) } as Record<string, unknown>;
-        // Deriva adx_label e atr_pct para o 1D se o bot não enviou
-        const _i1d = cached.indicators_1d as Record<string, unknown> | undefined;
-        if (_i1d && !_i1d.adx_label) {
-          const _adx = Number(_i1d.adx ?? 0);
-          const _atr = Number(_i1d.atr ?? 0);
-          const _p   = Number(cached.price ?? 1);
-          _i1d.adx_label   = _adx >= 35 ? "FORTE" : _adx >= 20 ? "MODERADO" : "FRACO";
-          _i1d.atr_pct     = _p > 0 ? Math.round((_atr / _p) * 10000) / 100 : 0;
-        }
-        // Injeta 1H/15M/5M + completa campos faltantes no 4H do bot
-        if (!cached.indicators_1h) {
-          try {
-            const { calculateRSI, calculateMACD, calculateEMA, calculateATR, calculateBB, calculateADX } = await import('@/lib/indicators');
-            const _hdr = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
-            const [r1w, r1d_v, r1h, r15m, r5m] = await Promise.all([
-              fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1wk&range=5y`,   { headers: _hdr, next: { revalidate: 86400 } }),
-              fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1y`,    { headers: _hdr, next: { revalidate: 3600 } }),
-              fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1h&range=60d`,  { headers: _hdr, next: { revalidate: 120 } }),
-              fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=15m&range=5d`, { headers: _hdr, next: { revalidate: 60 } }),
-              fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=5m&range=1d`,  { headers: _hdr, next: { revalidate: 30 } }),
-            ]);
-            type _YQ = { close?:(number|null)[], high?:(number|null)[], low?:(number|null)[], volume?:(number|null)[] };
-            type _YC = { chart?:{ result?:Array<{ indicators?:{ quote?:_YQ[] } }> } };
-            const _ext = (json: unknown) => { try { const r=(json as _YC)?.chart?.result?.[0]; if(!r) return null; const q:_YQ=r.indicators?.quote?.[0]||{}; const c=(q.close||[]).filter((x):x is number=>x!=null); const h=(q.high||[]).filter((x):x is number=>x!=null); const l=(q.low||[]).filter((x):x is number=>x!=null); const v=(q.volume||[]).filter((x):x is number=>x!=null); return c.length>=20?{c,h,l,v}:null; } catch{return null;} };
-            const _calc = (c:number[],h:number[],l:number[],v:number[]) => { const rv=calculateRSI(c,14); const mv=calculateMACD(c); const bv=calculateBB(c); const av=calculateADX(h,l,c,14); const tv=calculateATR(h,l,c,14).pop()??0; const e21=calculateEMA(c,21).pop()??0; const e50=calculateEMA(c,50).pop()??0; const p=c[c.length-1]; const em=p>e21&&p>e50?'BULLISH':p<e21&&p<e50?'BEARISH':'NEUTRO'; const tot=av.plusDI+av.minusDI; const avg20=v.length>=20?v.slice(-20).reduce((a,b)=>a+b,0)/20:0; return {rsi:rv,macd_cross:mv.cross,macd_above_zero:mv.aboveZero,bb_position:bv.position,adx:av.adx,adx_label:av.adx>=35?"FORTE":av.adx>=20?"MODERADO":"FRACO",atr:tv,atr_pct:p>0?Math.round((tv/p)*10000)/100:0,ema21:e21,ema50:e50,ema_position:em,plus_di:tot===0?0:Math.round(av.plusDI/tot*1000)/10,minus_di:tot===0?0:Math.round(av.minusDI/tot*1000)/10,volume_ratio:avg20>0?Math.round((v[v.length-1]/avg20)*100)/100:0}; };
-            // Semanal
-            if (r1w.ok)   { const d=_ext(await r1w.json());   if(d) cached.indicators_1w=_calc(d.c,d.h,d.l,d.v); }
-            // Volume 1D via daily fetch
-            if (r1d_v.ok) { const d=_ext(await r1d_v.json()); if(d&&d.v.length>=20&&_i1d){ const avg20=d.v.slice(-20).reduce((a,b)=>a+b,0)/20; _i1d.volume_ratio=avg20>0?Math.round((d.v[d.v.length-1]/avg20)*100)/100:0; } }
-            if (r1h.ok) { const d=_ext(await r1h.json()); if(d){ cached.indicators_1h=_calc(d.c,d.h,d.l,d.v); const c4:number[]=[],h4:number[]=[],l4:number[]=[],v4:number[]=[]; for(let i=3;i<d.c.length;i+=4){c4.push(d.c[i]);h4.push(Math.max(...d.h.slice(i-3,i+1)));l4.push(Math.min(...d.l.slice(i-3,i+1)));v4.push(d.v.slice(i-3,i+1).reduce((a,b)=>a+b,0));} if(c4.length>=20){ const calc4h=_calc(c4,h4,l4,v4); cached.indicators_4h={...calc4h,...(cached.indicators_4h as Record<string,unknown>??{})}; } } }
-            if (r15m.ok) { const d=_ext(await r15m.json()); if(d) cached.indicators_15m=_calc(d.c,d.h,d.l,d.v); }
-            if (r5m.ok)  { const d=_ext(await r5m.json());  if(d) cached.indicators_5m=_calc(d.c,d.h,d.l,d.v); }
-          } catch(_e) {}
-        }
+        // SEMPRE recalcula TODOS os TFs ao vivo via Yahoo Finance — dados reais e atualizados
+        // a cada request, igual ao crypto. Não depende mais do que o bot sincronizou (o sync do
+        // Bot-Acoes podia vir sem plus_di/minus_di no 1D; agora todo TF é recomputado aqui, com
+        // fallback silencioso pro cache do bot só se a Yahoo falhar naquele TF específico).
+        try {
+          const { calculateRSI, calculateMACD, calculateEMA, calculateATR, calculateBB, calculateADX } = await import('@/lib/indicators');
+          const _hdr = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
+          const [r1w, r1d, r1h, r15m, r5m] = await Promise.all([
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1wk&range=5y`,   { headers: _hdr, next: { revalidate: 86400 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1y`,    { headers: _hdr, next: { revalidate: 3600 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1h&range=60d`,  { headers: _hdr, next: { revalidate: 120 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=15m&range=5d`, { headers: _hdr, next: { revalidate: 60 } }),
+            fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=5m&range=1d`,  { headers: _hdr, next: { revalidate: 30 } }),
+          ]);
+          type _YQ = { close?:(number|null)[], high?:(number|null)[], low?:(number|null)[], volume?:(number|null)[] };
+          type _YC = { chart?:{ result?:Array<{ indicators?:{ quote?:_YQ[] } }> } };
+          const _ext = (json: unknown) => { try { const r=(json as _YC)?.chart?.result?.[0]; if(!r) return null; const q:_YQ=r.indicators?.quote?.[0]||{}; const c=(q.close||[]).filter((x):x is number=>x!=null); const h=(q.high||[]).filter((x):x is number=>x!=null); const l=(q.low||[]).filter((x):x is number=>x!=null); const v=(q.volume||[]).filter((x):x is number=>x!=null); return c.length>=20?{c,h,l,v}:null; } catch{return null;} };
+          const _calc = (c:number[],h:number[],l:number[],v:number[]) => { const rv=calculateRSI(c,14); const mv=calculateMACD(c); const bv=calculateBB(c); const av=calculateADX(h,l,c,14); const tv=calculateATR(h,l,c,14).pop()??0; const e21=calculateEMA(c,21).pop()??0; const e50=calculateEMA(c,50).pop()??0; const p=c[c.length-1]; const em=p>e21&&p>e50?'BULLISH':p<e21&&p<e50?'BEARISH':'NEUTRO'; const tot=av.plusDI+av.minusDI; const avg20=v.length>=20?v.slice(-20).reduce((a,b)=>a+b,0)/20:0; return {rsi:rv,macd_cross:mv.cross,macd_above_zero:mv.aboveZero,bb_position:bv.position,adx:av.adx,adx_label:av.adx>=35?"FORTE":av.adx>=20?"MODERADO":"FRACO",atr:tv,atr_pct:p>0?Math.round((tv/p)*10000)/100:0,ema21:e21,ema50:e50,ema_position:em,plus_di:tot===0?0:Math.round(av.plusDI/tot*1000)/10,minus_di:tot===0?0:Math.round(av.minusDI/tot*1000)/10,volume_ratio:avg20>0?Math.round((v[v.length-1]/avg20)*100)/100:0}; };
+          // Semanal
+          if (r1w.ok) { const d=_ext(await r1w.json()); if(d) cached.indicators_1w=_calc(d.c,d.h,d.l,d.v); }
+          // Diário — antes só completava adx_label/atr_pct/volume_ratio do que o bot mandava
+          // (DI+/DI- podiam ficar ausentes); agora recalcula tudo ao vivo, igual aos outros TFs.
+          if (r1d.ok) { const d=_ext(await r1d.json()); if(d) cached.indicators_1d=_calc(d.c,d.h,d.l,d.v); }
+          if (r1h.ok) { const d=_ext(await r1h.json()); if(d){ cached.indicators_1h=_calc(d.c,d.h,d.l,d.v); const c4:number[]=[],h4:number[]=[],l4:number[]=[],v4:number[]=[]; for(let i=3;i<d.c.length;i+=4){c4.push(d.c[i]);h4.push(Math.max(...d.h.slice(i-3,i+1)));l4.push(Math.min(...d.l.slice(i-3,i+1)));v4.push(d.v.slice(i-3,i+1).reduce((a,b)=>a+b,0));} if(c4.length>=20) cached.indicators_4h=_calc(c4,h4,l4,v4); } }
+          if (r15m.ok) { const d=_ext(await r15m.json()); if(d) cached.indicators_15m=_calc(d.c,d.h,d.l,d.v); }
+          if (r5m.ok)  { const d=_ext(await r5m.json());  if(d) cached.indicators_5m=_calc(d.c,d.h,d.l,d.v); }
+        } catch(_e) {}
         return NextResponse.json({ analysis: cached });
       }
       // Real-time analysis via Yahoo Finance
