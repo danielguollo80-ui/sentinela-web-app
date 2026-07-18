@@ -5,6 +5,15 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
+// Tokens de preço unitário muito baixo — Binance/Bybit listam com multiplicador 1000x
+// (ex: 1000BONKUSDT), enquanto OKX/KuCoin/CryptoCompare aceitam o símbolo puro (BONK).
+const MULTIPLIER_1000_TOKENS = new Set(['BONK', 'FLOKI', 'PEPE', 'SHIB', 'SATS', 'RATS', 'LUNC', 'XEC', 'CAT', 'CHEEMS']);
+function toBinancePair(base: string): string {
+  const clean = base.replace('USDT', '');
+  const prefixed = MULTIPLIER_1000_TOKENS.has(clean) ? `1000${clean}` : clean;
+  return `${prefixed}USDT`;
+}
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -350,7 +359,7 @@ export async function GET(request: Request) {
         // MULTI-EXCHANGE REAL-TIME FALLBACK — também usado quando live=1 (busca manual do usuário)
         try {
           const cleanSymbol = selectedSymbol.replace('/', '').replace(':USDT', '').toUpperCase();
-          const pair = cleanSymbol.endsWith('USDT') ? cleanSymbol : cleanSymbol + 'USDT';
+          const pair = toBinancePair(cleanSymbol);
           const cleanBase = cleanSymbol.replace('USDT', '');
           
           let klines: unknown[][] = [];
@@ -620,7 +629,7 @@ export async function GET(request: Request) {
               // herda o RSI de TF curto pré-preenchido acima → mostra RSI alto errado (ex.: 55.9 em vez de 23).
               if (!_ccOk1d) {
                 try {
-                  const _fp1d = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+                  const _fp1d = toBinancePair(cleanBase);
                   const _bd = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp1d}&interval=1d&limit=200`, { next: { revalidate: 3600 } });
                   if (_bd.ok) { const j = await _bd.json(); if (Array.isArray(j) && j.length >= 30) (realTimeData as Record<string,unknown>).indicators_1d = calcDT(j.map((k: unknown[]) => ({ time: k[0] as number, open: +(k[1] as string), high: +(k[2] as string), low: +(k[3] as string), close: +(k[4] as string), volumeto: +(k[5] as string) }))); }
                 } catch(_e) {}
@@ -637,7 +646,7 @@ export async function GET(request: Request) {
                   high: parseFloat(k[2] as string), low: parseFloat(k[3] as string),
                   close: parseFloat(k[4] as string), volumeto: parseFloat(k[5] as string)
                 }));
-                const fpair = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+                const fpair = toBinancePair(cleanBase);
                 const [g1h, g15m, g5m] = await Promise.all([
                   rt0.indicators_1h  == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=1h&limit=200`,  { next: { revalidate: 120 } }) : null,
                   rt0.indicators_15m == null ? fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${fpair}&interval=15m&limit=200`, { next: { revalidate: 60 } })  : null,
@@ -701,7 +710,7 @@ export async function GET(request: Request) {
         } catch(_e) {} }
         // 3) Binance Futures (4h, ASC, [openTime(ms),o,h,l,c,...]) — só funciona fora de US
         if (hc.length < 30) { try {
-          const _fp = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+          const _fp = toBinancePair(cleanBase);
           const _r = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${_fp}&interval=4h&limit=300`, { next: { revalidate: 300 } });
           if (_r.ok) { const _j = await _r.json() as unknown[][]; if (Array.isArray(_j) && _j.length >= 30)
             hc = _j.map(k => ({ time: Math.floor(parseInt(k[0] as string) / 1000), open: parseFloat(k[1] as string), high: parseFloat(k[2] as string), low: parseFloat(k[3] as string), close: parseFloat(k[4] as string) })); }
@@ -745,7 +754,7 @@ export async function GET(request: Request) {
       // Fonte primária: Bybit via bytick (api.binance.com E fapi.binance.com são geo-bloqueados nos IPs US do Vercel)
       if (!symbolData.indicators_5m) {
         try {
-          const _fp5 = `${cleanBase}USDT`;
+          const _fp5 = toBinancePair(cleanBase);
           const _h5 = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'application/json' };
           type Candle5 = { time: number; open: number; high: number; low: number; close: number; volumeto: number };
           let _c5: Candle5[] = [];
@@ -854,7 +863,7 @@ export async function GET(request: Request) {
           return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
         };
         // Binance Futures (fapi) — mesma fonte do bot, sem rate limit no Vercel
-        const pair = cleanBase.endsWith('USDT') ? cleanBase : `${cleanBase}USDT`;
+        const pair = toBinancePair(cleanBase);
         const binanceToCandles = (list: unknown[][]) =>
           list.map(k => ({
             time: parseInt(k[0] as string), open: parseFloat(k[1] as string),

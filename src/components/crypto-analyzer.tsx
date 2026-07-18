@@ -73,7 +73,10 @@ interface AnalysisResult {
 const fmtPrice = (val: number | undefined | null, decimals = 2) => {
   if (val == null) return "—";
   if (val >= 1000) return val.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  return val.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: 4 });
+  // Tokens de preço unitário muito baixo (ex.: BONK ~$0.0000278) precisam de mais casas
+  // decimais — 4 casas arredondaria pra "0.0000" e pareceria dado ausente.
+  const maxDecimals = val > 0 && val < 0.01 ? 8 : 4;
+  return val.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: maxDecimals });
 };
 
 function fmtNum(v?: number | null, d = 1) {
@@ -349,7 +352,7 @@ export function CryptoAnalyzer() {
 
       return {
         price,
-        poc: Math.round(mean4h * 100) / 100,
+        poc: mean4h,
         indicators_1w:  ind1w,
         indicators_1d:  ind1d,
         indicators_4h:  ind4h,
@@ -394,7 +397,7 @@ export function CryptoAnalyzer() {
       // Usa sempre o caminho de cache + enriquecimento Binance (Path B): estável no Vercel e traz o 5M.
       // O live=1 (multi-exchange via Bybit) falha no Vercel e às vezes retorna 404; para moeda fora do
       // cache o backend já cai no fallback multi-exchange sozinho (quando symbolData não existe).
-      const url = `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}&noai=1`;
+      const url = `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}${silent ? '&noai=1' : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
