@@ -70,6 +70,15 @@ interface AnalysisResult {
 }
 
 
+// Tokens de preço unitário muito baixo — Binance/Bybit listam com multiplicador 1000x
+// (ex: 1000BONKUSDT), enquanto o símbolo puro (BONK) é o que o usuário digita/busca.
+const MULTIPLIER_1000_TOKENS = new Set(['BONK', 'FLOKI', 'PEPE', 'SHIB', 'SATS', 'RATS', 'LUNC', 'XEC', 'CAT', 'CHEEMS']);
+function toBinancePair(symbol: string): string {
+  const clean = symbol.replace('USDT', '').toUpperCase();
+  const prefixed = MULTIPLIER_1000_TOKENS.has(clean) ? `1000${clean}` : clean;
+  return `${prefixed}USDT`;
+}
+
 const fmtPrice = (val: number | undefined | null, decimals = 2) => {
   if (val == null) return "—";
   if (val >= 1000) return val.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -326,7 +335,7 @@ export function CryptoAnalyzer() {
     indicators_1w: IndicatorData; indicators_1d: IndicatorData; indicators_4h: IndicatorData;
     indicators_1h: IndicatorData; indicators_15m: IndicatorData; indicators_5m: IndicatorData;
   }>> {
-    const pair = `${symbol}USDT`;
+    const pair = toBinancePair(symbol);
     const base = "https://fapi.binance.com/fapi/v1";
     try {
       const [k1w, k1d, k4h, k1h, k15m, k5m] = await Promise.all([
@@ -367,7 +376,7 @@ export function CryptoAnalyzer() {
   const refreshLivePrice = useCallback(async (symbol: string) => {
     if (!symbol) return;
     try {
-      const pair = `${symbol}USDT`;
+      const pair = toBinancePair(symbol);
       const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${pair}`);
       if (!res.ok) return;
       const data = await res.json();
