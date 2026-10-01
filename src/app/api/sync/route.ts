@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
+import { isAuthenticated, safeEqual } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
+
+// Leitura sem login só para estes painéis (eram públicos antes); o resto — crypto incluído — exige sessão
+const PUBLIC_BOTS = new Set(['stocks', 'football']);
 
 // Tokens de preço unitário muito baixo — Binance/Bybit listam com multiplicador 1000x
 // (ex: 1000BONKUSDT), enquanto OKX/KuCoin/CryptoCompare aceitam o símbolo puro (BONK).
@@ -22,7 +26,7 @@ export async function POST(request: Request) {
 
     const AUTH_TOKEN = (process.env.SYNC_AUTH_TOKEN || '').trim();
 
-    if (!AUTH_TOKEN || tokenParams !== AUTH_TOKEN) {
+    if (!AUTH_TOKEN || !tokenParams || !safeEqual(tokenParams, AUTH_TOKEN)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -57,12 +61,17 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
     const botType = searchParams.get('bot') || 'crypto';
-    const noAI = searchParams.get('noai') === '1';
+    const authed = isAuthenticated(request);
+    if (!authed && !PUBLIC_BOTS.has(botType)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // IA (Anthropic, paga por chamada) só para sessão logada — evita terceiros queimarem crédito
+    const noAI = searchParams.get('noai') === '1' || !authed;
     const liveRequested = searchParams.get('live') === '1';
 
     const url = process.env.REDIS_URL || '';

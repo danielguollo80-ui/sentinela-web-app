@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PasswordGate } from "@/components/password-gate";
 import {
   calculateRSI, calculateMACD, calculateATR, calculateADX,
   calculateBB, calculateEMA, calculateMFI, detectDivergence,
@@ -175,44 +176,17 @@ function AiAnalysisBlock({ text }: { text: string }) {
   );
 }
 
-const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_CRYPTO_PASSWORD ?? "Sentinela2026";
-
-function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
-  const [pwd, setPwd] = useState("");
-  const [wrong, setWrong] = useState(false);
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (pwd === CORRECT_PASSWORD) {
-      sessionStorage.setItem("sentinel_auth", "1");
-      onUnlock();
-    } else {
-      setWrong(true);
-      setPwd("");
-    }
-  };
-  return (
-    <div className="container mx-auto px-4 max-w-sm mt-24">
-      <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/60 space-y-6 text-center">
-        <h2 className="text-2xl font-black text-white uppercase">SENTINELA <span className="text-emerald-400">PRO</span></h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input type="password" placeholder="Password" value={pwd} onChange={(e) => { setPwd(e.target.value); setWrong(false); }} className="bg-slate-950 border-slate-700 text-white text-center" />
-          {wrong && <p className="text-sm text-red-400">Senha incorreta.</p>}
-          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg h-12">Entrar</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export function CryptoAnalyzer() {
   const [unlocked, setUnlocked] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // O cookie de sessão é HttpOnly — pergunta ao servidor se já está logado
   useEffect(() => {
-    queueMicrotask(() => {
-      setIsMounted(true);
-      if (typeof window !== "undefined" && sessionStorage.getItem("sentinel_auth") === "1") setUnlocked(true);
-    });
+    fetch("/api/login")
+      .then(r => r.json())
+      .then(d => { if (d?.authenticated) setUnlocked(true); })
+      .catch(() => {})
+      .finally(() => setIsMounted(true));
   }, []);
 
   const [query, setQuery] = useState("");
@@ -408,6 +382,7 @@ export function CryptoAnalyzer() {
       // cache o backend já cai no fallback multi-exchange sozinho (quando symbolData não existe).
       const url = `${API_BASE}?bot=crypto&symbol=${encodeURIComponent(s)}${silent ? '&noai=1' : ''}`;
       const res = await fetch(url);
+      if (res.status === 401) { setUnlocked(false); return; } // sessão expirou → volta ao login
       if (!res.ok) throw new Error("Erro na conexão");
       const data = await res.json();
       let analysis = data.analysis;

@@ -11,8 +11,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@base-ui/react": "^1.4.0",
-    "@google/generative-ai": "^0.24.1",
-    "@vercel/kv": "^3.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
@@ -21,7 +19,7 @@
     "ioredis": "^5.10.1",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^1.8.0",
-    "next": "16.2.4",
+    "next": "16.3.8",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.3.0",
@@ -34,7 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import { SentinelaChart, SentinelaChartHandle } from './sentinela-chart';
 import { SentinelaBioPanel } from './sentinela-bio-panel';
 import { MatchAnalysisPanel } from './match-analysis-panel';
+import { PasswordGate } from './password-gate';
 import { Button as ShadButton } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'TAO/U
 export const BannerGenerator = () => {
   const [activeBot, setActiveBot] = useState<'crypto' | 'football'>('crypto');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false); // dados crypto exigem sessão (401 → mostra login)
   const [availableSymbols, setAvailableSymbols] = useState<string[]>(DEFAULT_SYMBOLS);
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT");
   const [availableMatches, setAvailableMatches] = useState<string[]>([]);
@@ -209,7 +211,9 @@ export const BannerGenerator = () => {
         const sym = symbolOverride || selectedSymbol;
         const url = `/api/sync?bot=crypto${sym ? `&symbol=${encodeURIComponent(sym)}` : ''}`;
         const res = await fetch(url);
+        if (res.status === 401) { setNeedsLogin(true); return; }
         if (!res.ok) throw new Error('Falha ao buscar dados do Redis');
+        setNeedsLogin(false);
         const json = await res.json();
         
         setAvailableSymbols(DEFAULT_SYMBOLS);
@@ -287,6 +291,9 @@ export const BannerGenerator = () => {
 
   return (
      <div className="container mx-auto p-4 lg:p-8 max-w-[1600px]">
+        {activeBot === 'crypto' && needsLogin && (
+          <PasswordGate className="mb-8" onUnlock={() => { setNeedsLogin(false); handleSync(); }} />
+        )}
         {/* Quick Actions Toolbar - NEW */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-4 glass-dark rounded-2xl border border-white/10 glow-blue">
            <div className="flex items-center gap-4">
