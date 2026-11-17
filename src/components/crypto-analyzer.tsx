@@ -145,6 +145,143 @@ function fngColor(v: number) {
   return "text-slate-300";
 }
 
+interface QuantSetup {
+  tipo: "LONG" | "SHORT" | "LATERAL";
+  label: string;
+  badge: string;
+  tf: string;
+  entrada?: number;
+  stop?: number;
+  alvo1?: number;
+  rr?: number;
+  score: number;
+  suporte?: number;
+  resistencia?: number;
+  motivo: string;
+}
+
+function computeQuantSetup(
+  price: number,
+  ind?: IndicatorData,
+  tfLabel: string = "4H"
+): QuantSetup | null {
+  if (!price || !ind || ind.rsi == null) return null;
+  const rsi = ind.rsi;
+  const wt = ind.wt1 ?? 0;
+  const adx = ind.adx ?? 0;
+  const plus_di = ind.plus_di ?? 0;
+  const minus_di = ind.minus_di ?? 0;
+  const atr = (ind.atr && ind.atr > 0) ? ind.atr : price * 0.02;
+  const bb_upper = (ind.bb_upper && ind.bb_upper > 0) ? ind.bb_upper : price + 2 * atr;
+  const bb_lower = (ind.bb_lower && ind.bb_lower > 0) ? ind.bb_lower : price - 2 * atr;
+  const ema21 = ind.ema21 ?? price;
+  const ema50 = ind.ema50 ?? price;
+
+  // 1. Detecção de Topo (Sobrecompra / Exaustão Compradora)
+  const isTop = (rsi >= 65) || (wt >= 45) || (price >= bb_upper * 0.995) || (ind.divergence === "BEARISH DIV");
+  // 2. Detecção de Fundo (Sobrevenda / Exaustão Vendedora)
+  const isBottom = (rsi <= 35) || (wt <= -45) || (price <= bb_lower * 1.005) || (ind.divergence === "BULLISH DIV");
+
+  if (isTop && !isBottom) {
+    const entrada = price;
+    const stop = Math.max(bb_upper * 1.008, price + atr * 1.5);
+    const alvo1 = Math.min(bb_lower, price - atr * 3.0);
+    const risk = stop - entrada;
+    const reward = entrada - alvo1;
+    const rr = risk > 0 ? Math.round((reward / risk) * 10) / 10 : 2.0;
+    const score = (rsi >= 70 && wt >= 50) ? 9.0 : 8.0;
+    return {
+      tipo: "SHORT",
+      label: `ALERTA DE TOPO (${tfLabel})`,
+      badge: "EXAUSTÃO COMPRADORA",
+      tf: tfLabel,
+      entrada,
+      stop,
+      alvo1,
+      rr: Math.max(1.5, rr),
+      score,
+      motivo: `RSI ${rsi.toFixed(1)} e WT ${wt.toFixed(1)} em zona de topo/rejeição.`
+    };
+  }
+
+  if (isBottom && !isTop) {
+    const entrada = price;
+    const stop = Math.min(bb_lower * 0.992, price - atr * 1.5);
+    const alvo1 = Math.max(bb_upper, price + atr * 3.0);
+    const risk = entrada - stop;
+    const reward = alvo1 - entrada;
+    const rr = risk > 0 ? Math.round((reward / risk) * 10) / 10 : 2.0;
+    const score = (rsi <= 30 && wt <= -50) ? 9.0 : 8.0;
+    return {
+      tipo: "LONG",
+      label: `ALERTA DE FUNDO (${tfLabel})`,
+      badge: "EXAUSTÃO VENDEDORA",
+      tf: tfLabel,
+      entrada,
+      stop,
+      alvo1,
+      rr: Math.max(1.5, rr),
+      score,
+      motivo: `RSI ${rsi.toFixed(1)} e WT ${wt.toFixed(1)} em zona de fundo/sobrevenda.`
+    };
+  }
+
+  // 3. Detecção de Mercado Lateral (ADX < 20)
+  if (adx < 20) {
+    return {
+      tipo: "LATERAL",
+      label: `ESTABILIZADO / LATERAL (${tfLabel})`,
+      badge: "CONSOLIDAÇÃO",
+      tf: tfLabel,
+      suporte: bb_lower,
+      resistencia: bb_upper,
+      score: 5.0,
+      motivo: `ADX ${adx.toFixed(1)} sem tendência direcional. Preço comprimido entre suporte e resistência.`
+    };
+  }
+
+  // 4. Momentum / Tendência em andamento (ADX >= 20 com direção)
+  if (plus_di > minus_di) {
+    const entrada = price > ema21 ? ema21 : price;
+    const stop = Math.min(ema50, entrada - atr * 1.5);
+    const alvo1 = entrada + atr * 2.5;
+    const risk = entrada - stop;
+    const reward = alvo1 - entrada;
+    const rr = risk > 0 ? Math.round((reward / risk) * 10) / 10 : 2.0;
+    return {
+      tipo: "LONG",
+      label: `MOMENTUM ALTA (${tfLabel})`,
+      badge: "TENDÊNCIA COMPRADORA",
+      tf: tfLabel,
+      entrada,
+      stop,
+      alvo1,
+      rr: Math.max(1.5, rr),
+      score: 7.5,
+      motivo: `ADX ${adx.toFixed(1)} com DI+ (${plus_di.toFixed(1)}) liderando o fluxo.`
+    };
+  } else {
+    const entrada = price < ema21 ? ema21 : price;
+    const stop = Math.max(ema50, entrada + atr * 1.5);
+    const alvo1 = entrada - atr * 2.5;
+    const risk = stop - entrada;
+    const reward = entrada - alvo1;
+    const rr = risk > 0 ? Math.round((reward / risk) * 10) / 10 : 2.0;
+    return {
+      tipo: "SHORT",
+      label: `MOMENTUM BAIXA (${tfLabel})`,
+      badge: "TENDÊNCIA VENDEDORA",
+      tf: tfLabel,
+      entrada,
+      stop,
+      alvo1,
+      rr: Math.max(1.5, rr),
+      score: 7.5,
+      motivo: `ADX ${adx.toFixed(1)} com DI- (${minus_di.toFixed(1)}) liderando a pressão.`
+    };
+  }
+}
+
 function SkeletonPulse({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded bg-slate-800/60 ${className}`} />;
 }
@@ -200,6 +337,7 @@ export function CryptoAnalyzer() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("scalp");
 
   const activeSymbol = useRef<string>("");
 
@@ -429,6 +567,34 @@ export function CryptoAnalyzer() {
   const cachedPrice = result?.price ?? (result as any)?.indicators_1h?.price ?? (result as any)?.indicators_4h?.price ?? 0;
   const displayPrice = (livePrice && livePrice > 0) ? livePrice : cachedPrice;
 
+  const activeIndicatorData: IndicatorData =
+    activeTab === "1w" ? d1w :
+    activeTab === "1d" ? d1 :
+    activeTab === "4h" ? d4 :
+    d1h;
+
+  const activeTfLabel =
+    activeTab === "1w" ? "1W" :
+    activeTab === "1d" ? "1D" :
+    activeTab === "4h" ? "4H" :
+    "1H";
+
+  const botSetup = (result?.setup && result.setup.tipo !== 'NEUTRO' && result.veredito === "APROVADO") ? {
+    tipo: (result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'LONG' as const : 'SHORT' as const,
+    label: (result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? `FUNDO (LONG) • ${activeTfLabel}` : `TOPO (SHORT) • ${activeTfLabel}`,
+    badge: 'BOT OFICIAL',
+    tf: activeTfLabel,
+    entrada: result.setup.entrada,
+    stop: result.setup.stop,
+    alvo1: result.setup.alvo1,
+    rr: result.setup.rr,
+    score: result.setup.score ?? 8.5,
+    motivo: 'Setup validado e aprovado pelo robô oficial'
+  } : null;
+
+  const quantSetup = computeQuantSetup(displayPrice, activeIndicatorData, activeTfLabel);
+  const effectiveSetup = botSetup || quantSetup;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <form onSubmit={(e) => { e.preventDefault(); analyze(query); }} className="flex gap-3 mb-2">
@@ -526,43 +692,67 @@ export function CryptoAnalyzer() {
                 )}
               </div>
 
-              {/* SECTION 2: TRADE SETUP (If exists) */}
+              {/* SECTION 2: TRADE SETUP (Bot oficial ou Quant Engine) */}
               <div className="lg:col-span-5 p-4 grid grid-cols-2 gap-y-2 gap-x-6 items-center border-r border-white/10 bg-slate-950/20">
-                {result.setup && result.setup.tipo !== 'NEUTRO' ? (
-                  <>
-                    <div className="col-span-2 flex items-center gap-2 mb-0.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'bg-emerald-400' : 'bg-rose-400'} ${result.veredito === "APROVADO" ? "animate-ping" : ""}`} />
-                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {(result.setup.tipo === 'LONG' || result.setup.tipo === 'POSSIBLE_BOTTOM') ? 'FUNDO (LONG)' : 'TOPO (SHORT)'} • {result.setup.score}/10
-                        {result.veredito !== "APROVADO" && " • SOB AUDITORIA"}
-                      </span>
-                    </div>
-                    {result.veredito === "APROVADO" ? (
-                      <>
-                        <div>
-                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Entrada</div>
-                          <div className="text-xl md:text-2xl font-mono font-black text-white">${fmtPrice(result.setup.entrada)}</div>
+                {effectiveSetup ? (
+                  effectiveSetup.tipo === "LATERAL" ? (
+                    <>
+                      <div className="col-span-2 flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">
+                            {effectiveSetup.label}
+                          </span>
                         </div>
-                        <div>
-                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Target</div>
-                          <div className="text-xl md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(result.setup.alvo1)}</div>
-                        </div>
-                        <div>
-                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">Stop</div>
-                          <div className="text-xl md:text-2xl font-mono font-black text-rose-400">${fmtPrice(result.setup.stop)}</div>
-                        </div>
-                        <div>
-                          <div className="text-[12px] font-black text-white uppercase tracking-widest mb-1">R/R</div>
-                          <div className="text-xl md:text-2xl font-black text-blue-400">{result.setup.rr.toFixed(1)}x</div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="col-span-2 py-4">
-                        <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Sinal Aguardando Confirmação IA</div>
-                        <div className="text-slate-600 text-xs italic font-medium">Os valores de entrada e stop foram ocultados para sua segurança até que a IA valide a confluência técnica.</div>
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 uppercase tracking-widest font-black">
+                          {effectiveSetup.badge}
+                        </span>
                       </div>
-                    )}
-                  </>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Suporte Range</div>
+                        <div className="text-base md:text-xl font-mono font-black text-emerald-400">${fmtPrice(effectiveSetup.suporte)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Resistência Range</div>
+                        <div className="text-base md:text-xl font-mono font-black text-rose-400">${fmtPrice(effectiveSetup.resistencia)}</div>
+                      </div>
+                      <div className="col-span-2 text-[10px] font-medium text-slate-400 italic">
+                        {effectiveSetup.motivo}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="col-span-2 flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${effectiveSetup.tipo === "LONG" ? "bg-emerald-400 animate-ping" : "bg-rose-400 animate-ping"}`} />
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${effectiveSetup.tipo === "LONG" ? "text-emerald-400" : "text-rose-400"}`}>
+                            {effectiveSetup.label} • {effectiveSetup.score}/10
+                          </span>
+                        </div>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded uppercase tracking-widest font-black border ${
+                          effectiveSetup.tipo === "LONG" ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" : "bg-rose-500/10 text-rose-300 border-rose-500/20"
+                        }`}>
+                          {effectiveSetup.badge}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Entrada</div>
+                        <div className="text-lg md:text-2xl font-mono font-black text-white">${fmtPrice(effectiveSetup.entrada)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Target</div>
+                        <div className="text-lg md:text-2xl font-mono font-black text-emerald-400">${fmtPrice(effectiveSetup.alvo1)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Stop</div>
+                        <div className="text-lg md:text-2xl font-mono font-black text-rose-400">${fmtPrice(effectiveSetup.stop)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">R/R</div>
+                        <div className="text-lg md:text-2xl font-black text-blue-400">{effectiveSetup.rr?.toFixed(1)}x</div>
+                      </div>
+                    </>
+                  )
                 ) : (
                   <div className="col-span-2 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest italic py-4">
                     Aguardando setup de elite...
@@ -573,17 +763,17 @@ export function CryptoAnalyzer() {
               {/* SECTION 3: QUICK INDICATORS (RSI & WT) */}
               <div className="lg:col-span-3 p-4 flex flex-col justify-center gap-3 bg-slate-950/40">
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI <span className="text-slate-500 font-medium normal-case">1D</span></span>
-                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(result.indicators_1d?.rsi)}`}>
-                    {fmtNum(result.indicators_1d?.rsi)}
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">RSI <span className="text-slate-500 font-medium normal-case">{activeTfLabel}</span></span>
+                  <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${rsiColor(activeIndicatorData?.rsi)}`}>
+                    {fmtNum(activeIndicatorData?.rsi)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
-                  <span className="text-[12px] font-black text-white uppercase tracking-widest">WT <span className="text-slate-500 font-medium normal-case">1D</span></span>
+                  <span className="text-[12px] font-black text-white uppercase tracking-widest">WT <span className="text-slate-500 font-medium normal-case">{activeTfLabel}</span></span>
                   <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${
-                    (result.indicators_1d?.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
+                    (activeIndicatorData?.wt1 ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
-                    {fmtNum(result.indicators_1d?.wt1)}
+                    {fmtNum(activeIndicatorData?.wt1)}
                   </span>
                 </div>
               </div>
@@ -591,7 +781,7 @@ export function CryptoAnalyzer() {
             </div>
           </div>
 
-          <Tabs defaultValue="1w" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-slate-900/80 p-1.5 h-14 rounded-2xl border border-slate-800/50 backdrop-blur-md shadow-2xl">
               <TabsTrigger
                 value="1w"
