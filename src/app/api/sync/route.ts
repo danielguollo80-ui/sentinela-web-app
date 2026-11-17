@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
           type _YQ = { close?:(number|null)[], high?:(number|null)[], low?:(number|null)[], volume?:(number|null)[] };
           type _YC = { chart?:{ result?:Array<{ indicators?:{ quote?:_YQ[] } }> } };
           const _ext = (json: unknown) => { try { const r=(json as _YC)?.chart?.result?.[0]; if(!r) return null; const q:_YQ=r.indicators?.quote?.[0]||{}; const c=(q.close||[]).filter((x):x is number=>x!=null); const h=(q.high||[]).filter((x):x is number=>x!=null); const l=(q.low||[]).filter((x):x is number=>x!=null); const v=(q.volume||[]).filter((x):x is number=>x!=null); return c.length>=20?{c,h,l,v}:null; } catch{return null;} };
-          const _calc = (c:number[],h:number[],l:number[],v:number[]) => { const rv=calculateRSI(c,14); const mv=calculateMACD(c); const bv=calculateBB(c); const av=calculateADX(h,l,c,14); const tv=calculateATR(h,l,c,14).pop()??0; const e21=calculateEMA(c,21).pop()??0; const e50=calculateEMA(c,50).pop()??0; const p=c[c.length-1]; const em=p>e21&&p>e50?'BULLISH':p<e21&&p<e50?'BEARISH':'NEUTRO'; const tot=av.plusDI+av.minusDI; const avg20=v.length>=20?v.slice(-20).reduce((a,b)=>a+b,0)/20:0; return {rsi:rv,macd_cross:mv.cross,macd_above_zero:mv.aboveZero,bb_position:bv.position,adx:av.adx,adx_label:av.adx>=35?"FORTE":av.adx>=20?"MODERADO":"FRACO",atr:tv,atr_pct:p>0?Math.round((tv/p)*10000)/100:0,ema21:e21,ema50:e50,ema_position:em,plus_di:tot===0?0:Math.round(av.plusDI/tot*1000)/10,minus_di:tot===0?0:Math.round(av.minusDI/tot*1000)/10,volume_ratio:avg20>0?Math.round((v[v.length-1]/avg20)*100)/100:0}; };
+          const _calc = (c:number[],h:number[],l:number[],v:number[]) => { const rv=calculateRSI(c,14); const mv=calculateMACD(c); const bv=calculateBB(c); const av=calculateADX(h,l,c,14); const tv=calculateATR(h,l,c,14).pop()??0; const e21=calculateEMA(c,21).pop()??0; const e50=calculateEMA(c,50).pop()??0; const p=c[c.length-1]; const em=p>e21&&p>e50?'BULLISH':p<e21&&p<e50?'BEARISH':'NEUTRO'; const tot=av.plusDI+av.minusDI; const avg20=v.length>=20?v.slice(-20).reduce((a,b)=>a+b,0)/20:0; return {rsi:rv,macd_cross:mv.cross,macd_above_zero:mv.aboveZero,bb_position:bv.position,adx:av.adx,adx_label:av.adx>25?"FORTE":av.adx>=20?"MODERADO":"FRACO",atr:tv,atr_pct:p>0?Math.round((tv/p)*10000)/100:0,ema21:e21,ema50:e50,ema_position:em,plus_di:tot===0?0:Math.round(av.plusDI/tot*1000)/10,minus_di:tot===0?0:Math.round(av.minusDI/tot*1000)/10,volume_ratio:avg20>0?Math.round((v[v.length-1]/avg20)*100)/100:0}; };
           // Semanal
           if (r1w.ok) { const d=_ext(await r1w.json()); if(d) cached.indicators_1w=_calc(d.c,d.h,d.l,d.v); }
           // Diário — antes só completava adx_label/atr_pct/volume_ratio do que o bot mandava
@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
             bb_position: bb.position, bb_upper: bb.upper, bb_lower: bb.lower,
             ema_position: emaPos, ema21, ema50, ema200,
             adx: adxData.adx, atr,
-            adx_label: adxData.adx >= 35 ? "FORTE" : adxData.adx >= 20 ? "MODERADO" : "FRACO",
+            adx_label: adxData.adx > 25 ? "FORTE" : adxData.adx >= 20 ? "MODERADO" : "FRACO",
             atr_pct: price > 0 ? Math.round((atr / price) * 10000) / 100 : 0,
             plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
             minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
@@ -286,7 +286,7 @@ export async function GET(request: NextRequest) {
             return {
               rsi: rsiV, macd_cross: macdV.cross, macd_above_zero: macdV.aboveZero,
               bb_position: bbV.position, adx: adxV.adx,
-              adx_label: adxV.adx >= 35 ? "FORTE" : adxV.adx >= 20 ? "MODERADO" : "FRACO",
+              adx_label: adxV.adx > 25 ? "FORTE" : adxV.adx >= 20 ? "MODERADO" : "FRACO",
               atr: atrV, atr_pct: p > 0 ? Math.round((atrV / p) * 10000) / 100 : 0,
               ema21: e21, ema50: e50, ema_position: emaTF,
               plus_di:  tot === 0 ? 0 : Math.round(adxV.plusDI  / tot * 1000) / 10,
@@ -524,7 +524,7 @@ export async function GET(request: NextRequest) {
               rsi: rsi,
               macd_cross: macd.cross,
               adx: adxData.adx,
-              adx_label: adxData.adx > 25 ? 'FORTE' : adxData.adx > 20 ? 'FRACO' : 'SIDEWAYS',
+              adx_label: adxData.adx > 25 ? 'FORTE' : adxData.adx >= 20 ? 'MODERADO' : 'FRACO',
               plus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.plusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
               minus_di: (adxData.plusDI + adxData.minusDI) === 0 ? 0 : Math.round((adxData.minusDI / (adxData.plusDI + adxData.minusDI)) * 1000) / 10,
               vmc_dot: rsi > 70 ? "RED" : rsi < 30 ? "GREEN" : "NEUTRAL",
@@ -612,7 +612,7 @@ export async function GET(request: NextRequest) {
               const ema_position=p>ema21&&p>ema50?'BULLISH':p<ema21&&p<ema50?'BEARISH':'NEUTRO';
               const vol20=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
               const volume_ratio=Math.round((vol20>0?vols[vols.length-1]/vol20:1)*10)/10;
-              return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
+              return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>=20?'MODERADO':'FRACO', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
             };
             // Converte klines Bybit (desc) → Candle[] (asc) para calcDT
             const bybitToCandles = (list: unknown[][]) =>
@@ -820,7 +820,7 @@ export async function GET(request: NextRequest) {
               const ema21_5=Math.round(ema5(closes,21)*10000)/10000; const ema50_5=Math.round(ema5(closes,50)*10000)/10000;
               const ema_position5=p5>ema21_5&&p5>ema50_5?'BULLISH':p5<ema21_5&&p5<ema50_5?'BEARISH':'NEUTRO';
               const vol20_5=vols.slice(-20).reduce((a,b)=>a+b,0)/20; const volume_ratio5=Math.round((vol20_5>0?vols[vols.length-1]/vol20_5:1)*10)/10;
-              symbolData.indicators_5m = { rsi: rsi5, macd_cross: macd_cross5, macd_above_zero: mv5>0, adx: adx5, adx_label: adx5>25?'FORTE':adx5>20?'FRACO':'SIDEWAYS', plus_di: plus_di5, minus_di: minus_di5, bb_position: bb_position5, ema21: ema21_5, ema50: ema50_5, ema_position: ema_position5, volume_ratio: volume_ratio5 };
+              symbolData.indicators_5m = { rsi: rsi5, macd_cross: macd_cross5, macd_above_zero: mv5>0, adx: adx5, adx_label: adx5>25?'FORTE':adx5>=20?'MODERADO':'FRACO', plus_di: plus_di5, minus_di: minus_di5, bb_position: bb_position5, ema21: ema21_5, ema50: ema50_5, ema_position: ema_position5, volume_ratio: volume_ratio5 };
             }
           }
         } catch(_e) {}
@@ -869,7 +869,7 @@ export async function GET(request: NextRequest) {
           // Volume
           const vol20 = vols.slice(-20).reduce((a,b)=>a+b,0)/20;
           const volume_ratio = Math.round((vol20>0 ? vols[vols.length-1]/vol20 : 1)*10)/10;
-          return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>20?'FRACO':'SIDEWAYS', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
+          return { rsi, macd_cross, macd_above_zero: macdVal>0, adx, adx_label: adx>25?'FORTE':adx>=20?'MODERADO':'FRACO', plus_di, minus_di, bb_position, bb_upper: Math.round(bbu*10000)/10000, bb_lower: Math.round(bbl*10000)/10000, ema21, ema50, ema_position, volume_ratio };
         };
         // Binance Futures (fapi) — mesma fonte do bot, sem rate limit no Vercel
         const pair = toBinancePair(cleanBase);

@@ -104,7 +104,8 @@ function rsiColor(rsi?: number) {
 function adxColor(label?: string) {
   if (!label) return "text-slate-400";
   if (label.includes("FORTE")) return "text-emerald-400";
-  if (label.includes("FRACO")) return "text-yellow-500";
+  if (label.includes("FRACO") || label.includes("SIDEWAYS") || label.includes("CHOPPY")) return "text-yellow-500";
+  if (label.includes("MODERADO")) return "text-slate-200";
   return "text-slate-200";
 }
 
