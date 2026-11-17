@@ -101,7 +101,12 @@ function rsiColor(rsi?: number) {
   return "text-white";
 }
 
-function adxColor(label?: string) {
+function adxColor(label?: string, value?: number) {
+  if (value != null && !isNaN(value)) {
+    if (value > 25) return "text-emerald-400";
+    if (value >= 20) return "text-slate-200";
+    return "text-yellow-500";
+  }
   if (!label) return "text-slate-400";
   if (label.includes("FORTE")) return "text-emerald-400";
   if (label.includes("FRACO") || label.includes("SIDEWAYS") || label.includes("CHOPPY")) return "text-yellow-500";
@@ -260,7 +265,7 @@ export function CryptoAnalyzer() {
     const volume_ratio = avg20vol > 0 ? Math.round((volumes.at(-1)! / avg20vol) * 100) / 100 : 0;
 
     // ADX label
-    const adx_label = adxRes.adx >= 35 ? "FORTE" : adxRes.adx >= 20 ? "MODERADO" : "FRACO";
+    const adx_label = adxRes.adx > 25 ? "FORTE" : adxRes.adx >= 20 ? "MODERADO" : "FRACO";
 
     // WaveTrend (WT) simplificado via CCI proxy
     const hlc3 = closes.map((c: number, i: number) => (highs[i] + lows[i] + c) / 3);
@@ -626,7 +631,7 @@ export function CryptoAnalyzer() {
                 <StatCell label="Tendência 1W" value={d1w.ema_position ?? "—"} valueClass={emaColor(d1w.ema_position)} />
                 <StatCell label="RSI 1W" value={fmtNum(d1w.rsi)} valueClass={rsiColor(d1w.rsi)} />
                 <StatCell label="MACD 1W" value={d1w.macd_cross ?? "—"} valueClass={macdColor(d1w.macd_cross)} />
-                <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label)} />
+                <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label, d1w.adx)} />
                 <StatCell label="DI+ 1W" value={fmtNum(d1w.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 1W" value={fmtNum(d1w.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="Bollinger 1W" value={d1w.bb_position ?? "—"} valueClass={d1w.bb_position?.includes("Superior") ? "text-rose-400" : d1w.bb_position?.includes("Inferior") ? "text-emerald-400" : "text-yellow-400"} />
@@ -639,7 +644,7 @@ export function CryptoAnalyzer() {
                 <StatCell label="Tendência 1D" value={d1.ema_position ?? "—"} valueClass={emaColor(d1.ema_position)} />
                 <StatCell label="Tendência 4H" value={d4.ema_position ?? "—"} valueClass={emaColor(d4.ema_position)} />
                 <StatCell label="RSI" value={fmtNum(d1.rsi)} valueClass={rsiColor(d1.rsi)} />
-                <StatCell label="ADX" value={fmtNum(d1.adx)} valueClass={adxColor(d1.adx_label)} />
+                <StatCell label="ADX" value={fmtNum(d1.adx)} valueClass={adxColor(d1.adx_label, d1.adx)} />
                 <StatCell label="DI+" value={fmtNum(d1.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI-" value={fmtNum(d1.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="MACD" value={d1.macd_cross ?? "—"} valueClass={macdColor(d1.macd_cross)} />
@@ -656,7 +661,7 @@ export function CryptoAnalyzer() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <StatCell label="RSI 4H" value={fmtNum(d4.rsi)} valueClass={rsiColor(d4.rsi)} />
                 <StatCell label="MACD 4H" value={d4.macd_cross ?? "—"} valueClass={macdColor(d4.macd_cross)} />
-                <StatCell label="ADX 4H" value={fmtNum(d4.adx)} valueClass={adxColor(d4.adx_label)} />
+                <StatCell label="ADX 4H" value={fmtNum(d4.adx)} valueClass={adxColor(d4.adx_label, d4.adx)} />
                 <StatCell label="DI+ 4H" value={fmtNum(d4.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 4H" value={fmtNum(d4.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="POC Pivot" value={`$${fmtPrice(result.poc, 2)}`} valueClass="text-blue-400" />
@@ -680,7 +685,7 @@ export function CryptoAnalyzer() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
                   <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
-                  <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
+                  <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label, d1h.adx)} />
                   <StatCell
                     label="Volume 1H"
                     value={d1h.volume_ratio != null ? `${d1h.volume_ratio.toFixed(2)}x` : "—"}
@@ -701,7 +706,7 @@ export function CryptoAnalyzer() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatCell label="RSI 15M" value={fmtNum(d15.rsi)} valueClass={rsiColor(d15.rsi)} />
                   <StatCell label="MACD 15M" value={d15.macd_cross ?? "—"} valueClass={macdColor(d15.macd_cross)} />
-                  <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label)} />
+                  <StatCell label="ADX 15M" value={fmtNum(d15.adx)} valueClass={adxColor(d15.adx_label, d15.adx)} />
                   <StatCell
                     label="Volume 15M"
                     value={d15.volume_ratio != null ? `${d15.volume_ratio.toFixed(2)}x` : "—"}
@@ -721,7 +726,7 @@ export function CryptoAnalyzer() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <StatCell label="RSI 5M" value={fmtNum(d5.rsi)} valueClass={rsiColor(d5.rsi)} />
                   <StatCell label="MACD 5M" value={d5.macd_cross ?? "—"} valueClass={macdColor(d5.macd_cross)} />
-                  <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label)} />
+                  <StatCell label="ADX 5M" value={fmtNum(d5.adx)} valueClass={adxColor(d5.adx_label, d5.adx)} />
                   <StatCell label="DI+ 5M" value={fmtNum(d5.plus_di)} valueClass="text-emerald-400" />
                   <StatCell label="DI- 5M" value={fmtNum(d5.minus_di)} valueClass="text-rose-400" />
                   <StatCell

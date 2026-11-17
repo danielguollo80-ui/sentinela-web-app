@@ -137,7 +137,12 @@ function emaColor(pos?: string) {
   return "text-white";
 }
 
-function adxColor(label?: string) {
+function adxColor(label?: string, value?: number) {
+  if (value != null && !isNaN(value)) {
+    if (value > 25) return "text-emerald-400";
+    if (value >= 20) return "text-slate-200";
+    return "text-yellow-500";
+  }
   if (!label) return "text-slate-400";
   if (label.includes("FORTE")) return "text-emerald-400";
   if (label.includes("FRACO") || label.includes("SIDEWAYS") || label.includes("CHOPPY")) return "text-yellow-500";
@@ -257,7 +262,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             </div>
             <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-1">
               <span className="text-[12px] font-black text-white uppercase tracking-widest">ADX <span className="text-slate-500 font-medium normal-case">1D</span></span>
-              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${adxColor(d1?.adx_label)}`}>
+              <span className={`text-3xl md:text-4xl font-black font-mono tracking-tighter ${adxColor(d1?.adx_label, d1?.adx)}`}>
                 {fmtNum(d1?.adx)}
               </span>
             </div>
@@ -290,7 +295,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
               <StatCell label="Tendência 1W" value={d1w.ema_position ?? "—"} valueClass={emaColor(d1w.ema_position)} />
               <StatCell label="RSI 1W" value={fmtNum(d1w.rsi)} valueClass={rsiColor(d1w.rsi)} />
               <StatCell label="MACD 1W" value={d1w.macd_cross ?? "—"} valueClass={macdColor(d1w.macd_cross)} />
-              <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label)} />
+              <StatCell label="ADX 1W" value={fmtNum(d1w.adx)} valueClass={adxColor(d1w.adx_label, d1w.adx)} />
               <StatCell label="DI+ 1W" value={fmtNum(d1w.plus_di)} valueClass="text-emerald-400" />
               <StatCell label="DI- 1W" value={fmtNum(d1w.minus_di)} valueClass="text-rose-400" />
               <StatCell label="Bollinger 1W" value={d1w.bb_position ?? "—"} valueClass={bbColor(d1w.bb_position)} />
@@ -308,7 +313,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             <StatCell label="Tendência 1D" value={d1?.ema_position ?? "—"} valueClass={emaColor(d1?.ema_position)} />
             <StatCell label="Tendência 4H" value={d4h?.ema_position ?? "—"} valueClass={emaColor(d4h?.ema_position)} />
             <StatCell label="RSI" value={fmtNum(stock.rsi)} valueClass={rsiColor(stock.rsi)} />
-            <StatCell label="ADX" value={fmtNum(d1?.adx)} valueClass={adxColor(d1?.adx_label)} />
+            <StatCell label="ADX" value={fmtNum(d1?.adx)} valueClass={adxColor(d1?.adx_label, d1?.adx)} />
             <StatCell label="DI+" value={fmtNum(d1?.plus_di)} valueClass="text-emerald-400" />
             <StatCell label="DI-" value={fmtNum(d1?.minus_di)} valueClass="text-rose-400" />
             <StatCell label="MACD" value={d1?.macd_cross ?? "—"} valueClass={macdColor(d1?.macd_cross)} />
@@ -323,7 +328,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <StatCell label="RSI 4H" value={fmtNum(d4h.rsi)} valueClass={rsiColor(d4h.rsi)} />
               <StatCell label="MACD 4H" value={d4h.macd_cross ?? "—"} valueClass={macdColor(d4h.macd_cross)} />
-              <StatCell label="ADX 4H" value={fmtNum(d4h.adx)} valueClass={adxColor(d4h.adx_label)} />
+              <StatCell label="ADX 4H" value={fmtNum(d4h.adx)} valueClass={adxColor(d4h.adx_label, d4h.adx)} />
               <StatCell label="DI+ 4H" value={fmtNum(d4h.plus_di)} valueClass="text-emerald-400" />
               <StatCell label="DI- 4H" value={fmtNum(d4h.minus_di)} valueClass="text-rose-400" />
               <StatCell label="Bollinger 4H" value={d4h.bb_position ?? "—"} valueClass={bbColor(d4h.bb_position)} />
@@ -348,7 +353,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatCell label="RSI 1H" value={fmtNum(d1h.rsi)} valueClass={rsiColor(d1h.rsi)} />
                 <StatCell label="MACD 1H" value={d1h.macd_cross ?? "—"} valueClass={macdColor(d1h.macd_cross)} />
-                <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label)} />
+                <StatCell label="ADX 1H" value={fmtNum(d1h.adx)} valueClass={adxColor(d1h.adx_label, d1h.adx)} />
                 <StatCell label="Volume 1H" value={d1h.volume_ratio != null ? `${fmtNum(d1h.volume_ratio, 2)}x` : "—"} valueClass={volColor(d1h.volume_ratio)} />
                 <StatCell label="DI+ 1H" value={fmtNum(d1h.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 1H" value={fmtNum(d1h.minus_di)} valueClass="text-rose-400" />
@@ -369,7 +374,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatCell label="RSI 15M" value={fmtNum(d15m.rsi)} valueClass={rsiColor(d15m.rsi)} />
                 <StatCell label="MACD 15M" value={d15m.macd_cross ?? "—"} valueClass={macdColor(d15m.macd_cross)} />
-                <StatCell label="ADX 15M" value={fmtNum(d15m.adx)} valueClass={adxColor(d15m.adx_label)} />
+                <StatCell label="ADX 15M" value={fmtNum(d15m.adx)} valueClass={adxColor(d15m.adx_label, d15m.adx)} />
                 <StatCell label="Volume 15M" value={d15m.volume_ratio != null ? `${fmtNum(d15m.volume_ratio, 2)}x` : "—"} valueClass={volColor(d15m.volume_ratio)} />
                 <StatCell label="DI+ 15M" value={fmtNum(d15m.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 15M" value={fmtNum(d15m.minus_di)} valueClass="text-rose-400" />
@@ -390,7 +395,7 @@ function SearchResult({ stock }: { stock: StockAnalysis }) {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <StatCell label="RSI 5M" value={fmtNum(d5m.rsi)} valueClass={rsiColor(d5m.rsi)} />
                 <StatCell label="MACD 5M" value={d5m.macd_cross ?? "—"} valueClass={macdColor(d5m.macd_cross)} />
-                <StatCell label="ADX 5M" value={fmtNum(d5m.adx)} valueClass={adxColor(d5m.adx_label)} />
+                <StatCell label="ADX 5M" value={fmtNum(d5m.adx)} valueClass={adxColor(d5m.adx_label, d5m.adx)} />
                 <StatCell label="DI+ 5M" value={fmtNum(d5m.plus_di)} valueClass="text-emerald-400" />
                 <StatCell label="DI- 5M" value={fmtNum(d5m.minus_di)} valueClass="text-rose-400" />
                 <StatCell label="Volume 5M" value={d5m.volume_ratio != null ? `${fmtNum(d5m.volume_ratio, 2)}x` : "—"} valueClass={volColor(d5m.volume_ratio)} />
